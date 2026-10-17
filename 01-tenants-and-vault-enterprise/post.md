@@ -290,10 +290,10 @@ delivery through External Secrets Operator.
 
 ## What's next
 
-This post and its tutorial cover the apps: how a workload gets its secrets,
-and how tenants stay apart. People signing in are the other half. Anna
-should sign in once and see only `acme`, in the OpenShift console and in
-Vault alike.
+This post and its tutorial focus on apps: how a workload gets its secrets,
+and how tenants stay apart. You've seen what each access level looks like
+in Vault. The other half is setting up that sign-in for people, once, so
+that Anna sees only `acme` in the OpenShift console and in Vault alike.
 
 That half gets its own pair of posts, because it brings in pieces this one
 doesn't need: an identity provider with groups, and a change to how
