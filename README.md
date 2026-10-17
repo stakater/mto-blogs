@@ -4,6 +4,11 @@ Blog posts about Multi-Tenant Operator, written with Red Hat and published on
 Red Hat Developer first, then on the Stakater blog. Each post has a folder
 holding the draft, its screenshots and the examples readers run.
 
+Topics come in pairs: an **explainer** (why, for the people deciding) and a
+**tutorial** (how, for the engineer who tries it). The explainer links to the
+tutorial, and the tutorial ends at the point where a third tenant needs
+Enterprise. [HANDOFF.md](HANDOFF.md) is what Rafael validates and submits.
+
 **This repository is private until post 1 is published.** It becomes public
 on the day Red Hat publishes, so the examples are there when readers arrive.
 Red Hat publishes first, and the Stakater blog follows, linking back to the
@@ -32,8 +37,9 @@ run on a clean cluster with two tenants, the post isn't ready.
 
 | # | Post | Outlet | Status |
 |---|---|---|---|
-| 1 | [Tenants on OpenShift, carried into Vault Enterprise](01-tenants-and-vault-enterprise/post.md) | Red Hat Developer, then Stakater blog | Draft |
-| 2 | Tenants and Vault Community: a different isolation model | Red Hat Developer, then Stakater blog | Idea |
+| 1 | [One tenant, from OpenShift to Vault Enterprise](01-tenants-and-vault-enterprise/post.md) (explainer: why) | Red Hat Developer, then Stakater blog | Draft |
+| 2 | [Hands-on: tenants on OpenShift, carried into Vault Enterprise](02-try-it-tenants-and-vault-enterprise/post.md) (tutorial: how) | Red Hat Developer, then Stakater blog | Draft, screenshots to capture |
+| 3 | Tenants and Vault Community: a different isolation model | Red Hat Developer, then Stakater blog | Idea |
 | – | Same story, HashiCorp angle: Vault namespaces at scale on OpenShift | IBM HashiCorp | Idea, their team writes it |
 
 ## Writing rules
@@ -55,7 +61,8 @@ run on a clean cluster with two tenants, the post isn't ready.
 
 1. Draft in `NN-slug/post.md`, with diagrams in Mermaid in the same file.
 2. Put screenshots in `NN-slug/screenshots/` and the files readers run in
-   `NN-slug/examples/`.
+   `NN-slug/examples/`. Capture screenshots during the validation run, so
+   they match the steps exactly.
 3. Review happens on a pull request, and all three authors approve.
 4. Before submitting, run the examples end to end on a clean OpenShift
    cluster.

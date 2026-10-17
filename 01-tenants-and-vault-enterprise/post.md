@@ -227,23 +227,13 @@ Operator already depends on the same rule.
 ## Try it
 
 Multi-Tenant Operator's Basic edition is free with no expiry, and manages up
-to two tenants. That's enough to run this example and see two teams isolated
-from each other. You bring your own Vault Enterprise license, version 2.1 or
-later.
+to two tenants. That's enough to see two teams isolated from each other in
+Vault. You bring your own Vault Enterprise license, version 2.1 or later.
 
-The full guide takes about an hour on a running OpenShift cluster:
-
-1. Install Multi-Tenant Operator from OperatorHub, and switch on the Template
-   Operator it ships with.
-2. Install Vault Enterprise. The guide includes a single-pod learning setup.
-3. Install Vault Config Operator, External Secrets Operator and Reloader.
-4. Give Vault Config Operator its one login to Vault.
-5. Install the extension with Helm.
-6. Create two tenants, deploy an app, and check that each tenant is isolated
-   from the other.
-
-Every file in this post, and the full steps, are in the
-[step-by-step guide](https://github.com/stakater/mto-blogs/tree/main/01-tenants-and-vault-enterprise/examples).
+The companion tutorial,
+[Hands-on: tenants on OpenShift, carried into Vault Enterprise](https://github.com/stakater/mto-blogs/tree/main/02-try-it-tenants-and-vault-enterprise),
+takes you from an empty OpenShift cluster to an app reading its secret from
+its tenant's own Vault namespace, in about an hour.
 
 Transit and PKI engines aren't supported by the Vault Enterprise extension
 yet. Today it covers KV secrets, workload login, single sign-on, sharing and
