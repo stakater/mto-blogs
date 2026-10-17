@@ -1,0 +1,28 @@
+# Two tenants: the Basic edition's limit, and enough to see isolation.
+# Multi-Tenant Operator creates acme-shop and globex-web, and labels each
+# with stakater.com/tenant: <tenant>, the label the Vault extension keys on.
+apiVersion: tenantoperator.stakater.com/v1beta3
+kind: Tenant
+metadata:
+  name: acme
+spec:
+  accessControl:
+    owners:
+      users:
+        - anna@example.com
+  namespaces:
+    withTenantPrefix:
+      - shop
+---
+apiVersion: tenantoperator.stakater.com/v1beta3
+kind: Tenant
+metadata:
+  name: globex
+spec:
+  accessControl:
+    owners:
+      users:
+        - ben@example.com
+  namespaces:
+    withTenantPrefix:
+      - web

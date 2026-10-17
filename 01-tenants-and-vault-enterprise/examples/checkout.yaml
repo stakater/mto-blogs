@@ -1,0 +1,42 @@
+# The app's ServiceAccount asks for its own KV prefix, at the editor tier.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: checkout
+  namespace: acme-shop
+  annotations:
+    vault.stakater.com/kv: "true"
+    vault.stakater.com/tier: editor
+---
+# The Deployment asks for one secret: key "password" of the leaf "db" under
+# the app's prefix (kv/dev/acme-shop/checkout/db). External Secrets Operator
+# delivers it as the Secret checkout-db; Reloader rolls the pod when it changes.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout
+  namespace: acme-shop
+  annotations:
+    vault.stakater.com/kv-secret.db: db#password
+    reloader.stakater.com/auto: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: checkout
+  template:
+    metadata:
+      labels:
+        app: checkout
+    spec:
+      serviceAccountName: checkout
+      containers:
+        - name: checkout
+          image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+          command: ["sh", "-c", "echo \"db password has $(printf %s \"$DB_PASSWORD\" | wc -c) characters\"; sleep infinity"]
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: checkout-db
+                  key: password
