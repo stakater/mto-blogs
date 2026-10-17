@@ -1,0 +1,10 @@
+# The second tenant's app. Used to show that tenant globex can reach its own
+# Vault namespace and is refused in acme's.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: web
+  namespace: globex-web
+  annotations:
+    vault.stakater.com/kv: "true"
+    vault.stakater.com/tier: editor

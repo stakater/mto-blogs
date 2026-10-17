@@ -2,7 +2,8 @@
 
 <!--
 Outlet: Red Hat Developer (then the Stakater blog, canonical link back).
-Authors: Rasheed Amir (Stakater), Aisha (Stakater), Rafael (Red Hat).
+Rafael (Red Hat) validates the guide on his own cluster and submits the post.
+Authors: Rafael (Red Hat), Rasheed Amir (Stakater), Aisha (Stakater). Byline order to agree.
 Target: about 1,600 words. Reader: platform engineers running OpenShift and Vault.
 Title options:
   - One tenant, from OpenShift to Vault Enterprise
@@ -85,21 +86,40 @@ projects that are already in use in OpenShift shops:
 | Component | Role |
 |---|---|
 | **Multi-Tenant Operator** | Owns the `Tenant` and labels the tenant's projects |
-| **Template Operator** | Renders one set of Vault configuration resources per tenant |
+| **Template Operator** | Ships with Multi-Tenant Operator. Renders one set of Vault configuration resources per tenant |
 | **Vault Config Operator** | Writes that configuration into Vault, declaratively |
 | **External Secrets Operator** | Copies secrets from Vault into Kubernetes Secrets |
 | **Reloader** | Rolls the pods when a secret changes |
 
-<!-- RAFAEL: this section is yours. Vault Config Operator, the Red Hat
-Community of Practice project, why declarative Vault configuration matters,
-and the targetNamespace work in v1.0.3 that made one Vault namespace per
-tenant possible. About 200 words. -->
+### Vault configuration as Kubernetes resources
 
-Vault Config Operator is a Red Hat Community of Practice project, maintained
-by Red Hat and Stakater together. It manages Vault policies, auth methods
-and secret engines as Kubernetes resources. Version 1.0.3 added the piece
-this design depends on: Vault Config Operator logs in to Vault once, and
-writes each tenant's configuration into that tenant's own Vault namespace.
+Vault Config Operator is the piece that makes this work without a single
+hand-written Vault command per team. It's an open source project in the Red
+Hat Community of Practice. It turns Vault configuration into Kubernetes
+custom resources: a `Policy`, an `AuthEngineMount`, a
+`KubernetesAuthEngineRole`, a `SecretEngineMount`, and even a Vault
+`Namespace` itself.
+
+That changes how a platform team runs Vault. The configuration lives in Git
+and goes through review like any other manifest. It's applied by a
+controller instead of a person with a root token. Vault Config Operator can
+also check Vault against the resources and put back anything someone changed
+by hand.
+
+Until recently there was one gap for multi-tenancy. Vault Config Operator
+wrote every object into the Vault namespace it had logged in to. Giving each
+tenant its own Vault namespace would have meant a separate login, with its
+own credentials, for every tenant.
+
+Stakater closed that gap upstream. Version 1.0.3 adds
+`spec.authentication.targetNamespace`, so Vault Config Operator logs in
+**once** and writes each tenant's objects into that tenant's own Vault
+namespace. The same release fixes the controller that creates Vault
+namespaces, so they can be managed reliably as resources. The work went in
+through the normal upstream review
+([redhat-cop/vault-config-operator#373](https://github.com/redhat-cop/vault-config-operator/pull/373)),
+and every Vault Config Operator user gets it, with or without Multi-Tenant
+Operator.
 
 Here's the flow from a new team to a running pod with its secret:
 
@@ -211,13 +231,16 @@ to two tenants. That's enough to run this example and see two teams isolated
 from each other. You bring your own Vault Enterprise license, version 2.1 or
 later.
 
-1. Install Multi-Tenant Operator from OperatorHub in the OpenShift console.
-2. Install Vault Config Operator (v1.0.3 or later), Template Operator,
-   External Secrets Operator and Reloader.
-3. Have a Vault admin enable the Kubernetes auth method for Vault Config
-   Operator. This is a one-time step, and the commands are in the repository.
-4. Install the extension with Helm.
-5. Apply the two tenants and the `checkout` app from the examples.
+The full guide takes about an hour on a running OpenShift cluster:
+
+1. Install Multi-Tenant Operator from OperatorHub, and switch on the Template
+   Operator it ships with.
+2. Install Vault Enterprise. The guide includes a single-pod learning setup.
+3. Install Vault Config Operator, External Secrets Operator and Reloader.
+4. Give Vault Config Operator its one login to Vault.
+5. Install the extension with Helm.
+6. Create two tenants, deploy an app, and check that each tenant is isolated
+   from the other.
 
 Every file in this post, and the full steps, are at
 <!-- TODO: public URL once the repo is public, e.g. github.com/stakater/mto-blogs -->.
@@ -234,5 +257,5 @@ every day.
 
 ---
 
-*Rasheed Amir is <!-- role -->, Stakater. Aisha <!-- surname, role -->,
-Stakater. Rafael <!-- surname, role -->, Red Hat.*
+*Rafael <!-- surname, role -->, Red Hat. Rasheed Amir <!-- role -->,
+Stakater. Aisha <!-- surname, role -->, Stakater.*
