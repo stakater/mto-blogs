@@ -16,7 +16,7 @@ Allow about an hour.
 - This folder, checked out locally:
 
   ```bash
-  git clone https://github.com/stakater/mto-blogs.git   # TODO: final URL
+  git clone https://github.com/stakater/mto-blogs.git
   cd mto-blogs/01-tenants-and-vault-enterprise/examples
   ```
 
@@ -120,9 +120,20 @@ oc -n vault-config-operator rollout status deploy/vault-config-operator --timeou
 ## 4. Install External Secrets Operator and Reloader
 
 **External Secrets Operator:** in **Operators → OperatorHub**, install
-**External Secrets Operator for Red Hat OpenShift**, then create its
-configuration as the operator's page describes. <!-- RAFAEL-CHECK: confirm
-the operator name, channel and the configuration resource to create -->
+**External Secrets Operator for Red Hat OpenShift** with the defaults. Then
+tell it to deploy External Secrets Operator:
+
+```bash
+cat <<'YAML' | oc apply -f -
+apiVersion: operator.openshift.io/v1alpha1
+kind: ExternalSecretsConfig
+metadata:
+  name: cluster
+spec: {}
+YAML
+
+oc get crd externalsecrets.external-secrets.io    # present once it is running
+```
 
 **Reloader:**
 
@@ -277,11 +288,37 @@ v policy read -namespace=acme kv.acme.acme-shop.checkout   # back to what it was
 
 ## Optional: single sign-on for people
 
-The extension can also give each tenant an OIDC login for people, with four
-tiers (`viewer`, `editor`, `admin`, `audit-read`) mapped to identity-provider
-groups such as `acme-editors`. Setup is in the extension's documentation,
-under "Human SSO".
-<!-- TODO: link to the extension repo's charts/README.md#human-sso once public -->
+The extension can also give each tenant an OIDC login for people. Each
+tenant gets four tiers, `viewer`, `editor`, `admin` and `audit-read`, and each
+tier maps to an identity-provider group named `<tenant>-<tier>s`, such as
+`acme-editors`.
+
+You need an OIDC identity provider (for example Red Hat build of Keycloak)
+with a client for Vault. Store the client's secret, then turn SSO on in the
+extension:
+
+```bash
+oc -n vault-config create secret generic vault-oidc-client-secret \
+  --from-literal=client-secret='<the client secret>'
+
+helm upgrade mto-extension-vault-enterprise-bootstrap \
+  oci://ghcr.io/stakater/charts/mto-extension-vault-enterprise-bootstrap \
+  -n vault-config --reuse-values \
+  --set parent.sso.enabled=true \
+  --set parent.sso.issuerUrl=https://<your identity provider's issuer URL> \
+  --set tenantValues.sso.oidc.clientId=<the client ID, default vault>
+```
+
+Every tenant now has an OIDC login at `oidc/sso`. A member of `acme-editors`
+signs in to tenant `acme` with:
+
+```bash
+VAULT_NAMESPACE=acme vault login -method=oidc -path=oidc/sso role=sso.acme.editor
+```
+
+By default the login accepts only the Vault CLI's local callback. For browser
+logins in the Vault UI, also set `parent.sso.allowedRedirectUris` to your
+Vault UI's callback URL.
 
 ## Clean up
 

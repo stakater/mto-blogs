@@ -33,13 +33,14 @@ on the pull request.
 | 1. Multi-Tenant Operator | Installs from OperatorHub, version 1.10.0 or later; the patch brings up a `template-operator-v2` deployment |
 | 2. Vault Enterprise | `v version` prints `Vault v2.1.1+ent` |
 | 3. Vault Config Operator | The deployment rolls out on OpenShift without cert-manager |
-| 4. External Secrets Operator, Reloader | Both run. **Please confirm the OperatorHub install and configuration for External Secrets Operator (marked `RAFAEL-CHECK`)** |
+| 4. External Secrets Operator, Reloader | Both run. **Please confirm the `ExternalSecretsConfig` resource is the right way to turn on External Secrets Operator for Red Hat OpenShift on your version** |
 | 5. Vault login | All four commands succeed |
 | 6. Extension | The Helm install succeeds |
 | 7. Tenants | `v namespace list` shows `acme/`, `globex/` and `shared/` |
 | 8. App | The log says `db password has 6 characters` |
 | 9. Rotation | After the forced refresh, a new pod logs `10 characters` |
 | 10. Isolation | The allowed commands succeed, both refusals are refused, and the hand-widened policy is reverted |
+| Optional SSO | A member of `acme-editors` signs in to tenant `acme` and nowhere else |
 | Clean up | No Vault Config Operator resources left, and no namespace stuck |
 
 We validate the same guide on our side in parallel, so we compare notes

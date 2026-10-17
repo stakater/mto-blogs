@@ -242,8 +242,8 @@ The full guide takes about an hour on a running OpenShift cluster:
 6. Create two tenants, deploy an app, and check that each tenant is isolated
    from the other.
 
-Every file in this post, and the full steps, are at
-<!-- TODO: public URL once the repo is public, e.g. github.com/stakater/mto-blogs -->.
+Every file in this post, and the full steps, are in the
+[step-by-step guide](https://github.com/stakater/mto-blogs/tree/main/01-tenants-and-vault-enterprise/examples).
 
 Transit and PKI engines aren't supported by the Vault Enterprise extension
 yet. Today it covers KV secrets, workload login, single sign-on, sharing and
@@ -257,5 +257,5 @@ every day.
 
 ---
 
-*Rafael <!-- surname, role -->, Red Hat. Rasheed Amir <!-- role -->,
-Stakater. Aisha <!-- surname, role -->, Stakater.*
+*Rafael [surname], [role], Red Hat. Rasheed Amir, [role], Stakater.
+Aisha [surname], [role], Stakater.*
