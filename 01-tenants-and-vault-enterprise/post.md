@@ -16,15 +16,61 @@ of teams deploy to it, and every one of them needs secrets. Vault Enterprise
 holds those secrets. But Vault doesn't know who your teams are, and OpenShift
 doesn't tell it.
 
-So the platform team fills the gap by hand. A new team arrives, someone opens
-a ticket, and an engineer writes the Vault policies, the auth roles and the
-paths for that team. The team adds a project, and the ticket comes back. Over
-time, the configuration in Vault drifts away from the teams on the cluster,
-and nobody can say for sure who can read what.
+So the platform team fills the gap by hand. This post shows a different
+approach: you define the team once on the cluster, as a **tenant**, and that
+boundary carries into Vault automatically, all the way to the secret inside
+a running pod.
 
-This post shows a different approach. You define the team once on the
-cluster, as a **tenant**, and that boundary carries into Vault automatically,
-all the way to the secret inside a running pod.
+## What one team costs in Vault
+
+Here is what onboarding one team, with one app, looks like in Vault
+Enterprise when it's done properly: the team gets its own Vault namespace,
+the app gets its own path, and people sign in through the company's
+identity provider. The commands are simplified, but every line is a real
+step:
+
+```bash
+# A boundary for the team
+vault namespace create acme
+vault secrets enable -namespace=acme -path=kv kv-v2
+vault auth enable    -namespace=acme -path=kubernetes/workloads kubernetes
+vault write -namespace=acme auth/kubernetes/workloads/config \
+  kubernetes_host=https://kubernetes.default.svc:443
+
+# A policy and a login role for the app, limited to its own path
+vault policy write -namespace=acme checkout-editor - <<'EOF'
+path "kv/data/dev/acme-shop/checkout/*" { capabilities = ["create", "read", "update"] }
+path "kv/metadata/dev/acme-shop/checkout/*" { capabilities = ["list", "read"] }
+EOF
+vault write -namespace=acme auth/kubernetes/workloads/role/checkout \
+  bound_service_account_names=checkout \
+  bound_service_account_namespaces=acme-shop \
+  token_policies=checkout-editor
+
+# Sign-in for people: an OIDC login, and a policy and role per access level
+vault auth enable -namespace=acme -path=oidc/sso oidc
+vault write -namespace=acme auth/oidc/sso/config oidc_discovery_url=... oidc_client_id=... oidc_client_secret=...
+vault policy write -namespace=acme acme-editor ...
+vault write -namespace=acme auth/oidc/sso/role/editor bound_claims='{"groups":["acme-editors"]}' token_policies=acme-editor ...
+# ...and the same again for viewer, admin and audit-read
+```
+
+That's Vault. On the cluster, the app still needs a `SecretStore` and an
+`ExternalSecret` before the secret reaches the pod.
+
+Now multiply it. Every app in the team needs its own policy and role. Every
+team needs the whole block. Then it has to be **kept** right: a new project
+needs new bindings, an app that moves from editor to viewer needs its policy
+rewritten, and a team that leaves needs every grant removed. Nothing in
+Vault notices when the cluster changes.
+
+Platform teams end up in one of three places:
+
+- **One broad policy.** Quick to set up, and one leaked token reads every
+  team's secrets.
+- **A ticket per request.** Safe, and the platform team becomes the queue.
+- **Kept by hand.** The quiet one. People and apps leave, and their access
+  stays. It's the one that shows up in an audit.
 
 ## A project is not a team
 
@@ -65,18 +111,21 @@ secret engines, isolated from the others. It's the natural home for a tenant.
 What's usually missing is the automation that keeps the Vault namespaces in
 line with the teams.
 
-The Vault Enterprise extension for Multi-Tenant Operator provides it. For
-every tenant, it creates:
+The Vault Enterprise extension for Multi-Tenant Operator provides it. Every
+step from the previous section is taken over, and kept up to date:
 
-- a Vault namespace named after the tenant (`acme`)
-- a KV secrets engine inside it
-- a Kubernetes auth method inside it, so the tenant's workloads can log in
-  with their own ServiceAccount tokens
-- optionally, an OIDC login for people, mapped to identity-provider groups
+| By hand, per team | With the extension |
+|---|---|
+| Create a Vault namespace, a KV engine and a Kubernetes auth method | Created when the `Tenant` is created, named after it |
+| Write a policy per app and access level | Generated from two annotations on the app's ServiceAccount |
+| Write a login role per app | Generated per annotated ServiceAccount, bound to that ServiceAccount only |
+| Set up OIDC sign-in, with a role per group | One role per access level, bound to the group `<tenant>-<level>s`, such as `acme-editors` |
+| Wire up a `SecretStore` and an `ExternalSecret` per app | Generated from one annotation on the Deployment |
+| Keep it all right as teams change | An access level change rewrites the policy. A removed annotation removes the grant. A removed tenant loses its access, and keeps its data. A hand edit in Vault is put back. |
 
 When you add a tenant, a new Vault namespace appears. When you add a project
 to a tenant, its workloads can use that tenant's Vault namespace, and no
-other.
+other. Nobody runs a Vault command for any of it.
 
 ## How it works
 
@@ -241,9 +290,16 @@ delivery through External Secrets Operator.
 
 ## What's next
 
-The tenant you defined here doesn't stop at Vault. In the next posts in this
-series, we'll carry the same boundary into more of the tools your teams use
-every day.
+This post and its tutorial cover the apps: how a workload gets its secrets,
+and how tenants stay apart. People signing in are the other half. Anna
+should sign in once and see only `acme`, in the OpenShift console and in
+Vault alike.
+
+That half gets its own pair of posts, because it brings in pieces this one
+doesn't need: an identity provider with groups, and a change to how
+OpenShift signs people in. Covered here, it would double the tutorial and
+mix two different questions. Next time, we connect both through one
+login, and the same tenant decides what each person sees everywhere.
 
 ---
 

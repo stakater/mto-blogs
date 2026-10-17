@@ -493,6 +493,13 @@ own secrets engine and its own login, without anyone writing Vault
 configuration by hand. Apps asked for secrets with annotations. Rotations
 reached the running pod, and the boundary between the tenants held.
 
+One thing was left out on purpose: people. Apart from the optional section,
+everything here signed in as an app or as Vault's root token. Signing team
+members in once, to both the OpenShift console and Vault, with each person
+seeing only their own tenant, needs an identity provider with groups and a
+change to the OpenShift login. That's a tutorial of its own, and it's the
+next pair of posts in this series.
+
 The free edition stops at two tenants. When a third team arrives, that's
 where Multi-Tenant Operator Enterprise comes in.
 

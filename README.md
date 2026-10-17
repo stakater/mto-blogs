@@ -39,8 +39,16 @@ run on a clean cluster with two tenants, the post isn't ready.
 |---|---|---|---|
 | 1 | [One tenant, from OpenShift to Vault Enterprise](01-tenants-and-vault-enterprise/post.md) (explainer: why) | Red Hat Developer, then Stakater blog | Draft |
 | 2 | [Hands-on: tenants on OpenShift, carried into Vault Enterprise](02-try-it-tenants-and-vault-enterprise/post.md) (tutorial: how) | Red Hat Developer, then Stakater blog | Draft, screenshots to capture |
-| 3 | Tenants and Vault Community: a different isolation model | Red Hat Developer, then Stakater blog | Idea |
+| 3 | One login, every tool: tenant members in OpenShift and Vault (explainer) | Red Hat Developer, then Stakater blog | Idea |
+| 4 | Hands-on: one login for tenant members, with Red Hat build of Keycloak and the Dex that ships with Multi-Tenant Operator (tutorial) | Red Hat Developer, then Stakater blog | Idea |
+| 5 | Tenants and Vault Community: a different isolation model | Red Hat Developer, then Stakater blog | Idea |
 | – | Same story, HashiCorp angle: Vault namespaces at scale on OpenShift | IBM HashiCorp | Idea, their team writes it |
+
+Posts 3 and 4 are separate from 1 and 2 on purpose. Posts 1 and 2 are about
+apps: how a workload gets its secrets and how tenants stay apart. Posts 3
+and 4 are about people signing in, which needs an identity provider with
+groups and a change to the OpenShift login. Putting both in one tutorial
+would double it and mix two questions. Each post says so where it ends.
 
 ## Writing rules
 
