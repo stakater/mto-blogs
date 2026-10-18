@@ -280,8 +280,34 @@ An auditor can list what exists, but can't read any value:
 
 ## Guardrails for Vault owners
 
-Vault owners will ask what this setup can do to their Vault. The answers,
-each covered by the extension's end-to-end tests on Vault Enterprise 2.1.1:
+Vault owners will ask what this setup can do to their Vault. Start with the
+automation itself.
+
+### What the automation is allowed to do in Vault
+
+No root token is involved. Vault Config Operator logs in to Vault as one
+Kubernetes ServiceAccount, through Vault's Kubernetes auth method, and gets
+a short-lived token (one hour). A Vault admin sets up that login once, with
+a least-privilege policy that ships with the extension:
+
+| Vault Config Operator can | Vault Config Operator can't |
+|---|---|
+| Create tenant Vault namespaces | Delete a Vault namespace |
+| Inside each tenant's Vault namespace: enable the KV engine and the two login methods (Kubernetes for apps, OIDC for people), and manage their roles and policies | Delete a KV engine, so a tenant's secrets can't be removed by automation |
+| | **Read or write any secret.** It has no access to secret data at all |
+| | Change the policies, engines or login methods of the Vault namespace it logs in to, so it can't widen its own access |
+
+In production, give the tenants a dedicated parent Vault namespace, such as
+`tenants`. Vault Config Operator logs in there, and every tenant becomes a
+Vault namespace below it, such as `tenants/acme`. Everything outside that
+parent, including your existing Vault namespaces and configuration, is out
+of its reach. The whole policy is about 40 rules, short enough for your
+Vault team to review before anything is installed.
+
+### What the tests prove
+
+Each of these is covered by the extension's end-to-end tests on Vault
+Enterprise 2.1.1:
 
 - **Isolation holds.** A workload can't read another app's secrets, another
   tenant's Vault namespace, or log in with another tenant's role. Vault

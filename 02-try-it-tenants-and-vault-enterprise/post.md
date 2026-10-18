@@ -207,6 +207,14 @@ namespaces and KV engines, so removing a tenant never deletes its secrets.
 Vault checks the cluster's tokens with its own ServiceAccount, which the
 Helm chart allowed to do so in step 2. No credential is stored anywhere.
 
+**In production,** don't log Vault Config Operator in at the root namespace.
+Create a dedicated parent Vault namespace, such as `tenants`, run these
+commands inside it (add `-namespace=tenants`), and install the extension in
+step 6 with `--set vco.namespace=tenants`. Each tenant then becomes a Vault
+namespace below it, such as `tenants/acme`, and nothing outside `tenants` is
+in Vault Config Operator's reach. This tutorial uses the root namespace only
+to keep the commands short.
+
 ## Step 6: Install the extension
 
 ```bash
