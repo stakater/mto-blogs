@@ -342,9 +342,12 @@ The companion tutorial,
 takes you from an empty OpenShift cluster to an app reading its secret from
 its tenant's own Vault namespace, in about an hour.
 
-Transit and PKI engines aren't supported by the Vault Enterprise extension
-yet. Today it covers KV secrets, workload login, single sign-on, sharing and
-delivery through External Secrets Operator.
+Today the Vault Enterprise extension covers KV secrets, workload login,
+single sign-on, sharing and delivery through External Secrets Operator.
+Certificates (PKI) and encryption as a service (transit) are on the roadmap.
+PKI comes first: Vault Config Operator already manages PKI engines and
+roles, so each tenant can get its own certificate authority the same way it
+gets its own KV engine.
 
 ## What's next
 
