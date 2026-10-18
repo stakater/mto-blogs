@@ -54,6 +54,9 @@ must make that clear.
   it is never confused with a Kubernetes namespace.
 - No comparisons with competitors, and no "replace". Red Hat and HashiCorp
   products come across positively.
+- Leave out insider backstory: version numbers, field names, pull requests,
+  who fixed what. Include a detail only if the reader needs it to decide or
+  to act. Tutorials state required versions as prerequisites, nothing more.
 - One voice per post. Placeholders must be visible text (`[role]`), never
   HTML comments, which render as nothing.
 - Topics come in pairs: an explainer (why, for the people deciding) and a

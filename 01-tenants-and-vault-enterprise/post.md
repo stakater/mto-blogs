@@ -48,8 +48,7 @@ Community of Practice, External Secrets Operator and Reloader.
 - the tenant: a team as a first-class object on OpenShift
 - how one tenant becomes one Vault namespace, and what's automated along
   the way
-- how the pieces fit together, including an upstream change to Vault Config
-  Operator that made this possible
+- how the pieces fit together
 - the guardrails Vault owners will ask about
 
 **Who it's for:** platform engineers and architects who run OpenShift with
@@ -196,21 +195,6 @@ and goes through review like any other manifest. It's applied by a
 controller instead of a person with a root token. Vault Config Operator can
 also check Vault against the resources and put back anything someone changed
 by hand.
-
-Until recently there was one gap for multi-tenancy. Vault Config Operator
-wrote every object into the Vault namespace it had logged in to. Giving each
-tenant its own Vault namespace would have meant a separate login, with its
-own credentials, for every tenant.
-
-Stakater closed that gap upstream. Version 1.0.3 adds
-`spec.authentication.targetNamespace`, so Vault Config Operator logs in
-**once** and writes each tenant's objects into that tenant's own Vault
-namespace. The same release fixes the controller that creates Vault
-namespaces, so they can be managed reliably as resources. The work went in
-through the normal upstream review
-([redhat-cop/vault-config-operator#373](https://github.com/redhat-cop/vault-config-operator/pull/373)),
-and every Vault Config Operator user gets it, with or without Multi-Tenant
-Operator.
 
 Here's the flow from a new team to a running pod with its secret:
 
