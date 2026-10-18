@@ -1,13 +1,17 @@
-# Rafael: validating and publishing posts 1 and 2
+# Rafael: validating and publishing the posts
 
-Thank you for publishing these with us. There are two pieces:
+Thank you for publishing these with us. There are two pairs, each an
+explainer and its tutorial:
 
 | Post | Type | What it does |
 |---|---|---|
 | [1. One tenant, from OpenShift to Vault Enterprise](01-tenants-and-vault-enterprise/post.md) | Explainer, about 1,500 words | Why: the problem, the tenant, one Vault namespace per tenant, how it works, guardrails |
 | [2. Hands-on: tenants on OpenShift, carried into Vault Enterprise](02-try-it-tenants-and-vault-enterprise/post.md) | Tutorial | How: every step from an empty cluster to two isolated tenants, with screenshots |
+| [3. One login, every tool](03-one-login-for-tenant-members/post.md) | Explainer | Why: one group in the identity provider decides what a person sees in OpenShift and Vault, through the tenant and Multi-Tenant Operator's Dex |
+| [4. Hands-on: one login for tenant members](04-try-it-one-login-for-tenant-members/post.md) | Tutorial | How: Keycloak behind Dex, OpenShift and Vault as clients; Anna signs in, is refused in the other team, and loses access when she leaves |
 
-Post 1 links to post 2. They can go out together or a week apart.
+Each explainer links to its tutorial. A pair can go out together or a week
+apart; the second pair follows the first.
 
 What we need from you: read post 1, run post 2 on your own cluster, tell us
 what breaks, then submit both to Red Hat Developer.
@@ -43,9 +47,27 @@ We run the same tutorial on our side first and capture its screenshots, so
 by the time it reaches you it should pass. You're confirming it, not
 debugging it.
 
-## 3. Submit
+## 3. Run post 4
 
-- Submit both posts in the format Red Hat Developer asks for. If it isn't
+Post 4 continues on the same cluster after post 2.
+
+| Step | Passes when |
+|---|---|
+| 1. Addresses | `DEX_ISSUER` comes from the `DexConfig` resource; the trust check gives a clear answer |
+| 2–3. Keycloak | The route answers; the realm script ends with `realm tenants ready` |
+| 4. Connector | Dex restarts and still serves its discovery document |
+| 5. Clients | Both `Client` resources apply |
+| 6. OpenShift OAuth | The authentication operator settles; the login page shows "tenants" |
+| 7. Tenants | `acme-editors`, `acme-viewers` and `acme-admins` are bound in `acme-shop` |
+| 8. Vault | `v list -namespace=acme auth/oidc/sso/role` shows four roles |
+| 9. OpenShift as Anna | She sees only `acme-shop`; `globex-web` is refused; `oc get group acme-editors` lists her |
+| 10. Vault as Anna | She edits `db` in `acme`; the `globex` sign-in is refused |
+| 11. Anna leaves | **Please confirm that OpenShift removes her from `acme-editors` at her next sign-in**, and that Vault refuses her |
+| Clean up | The cluster is back where post 2 ended |
+
+## 4. Submit
+
+- Submit the posts in the format Red Hat Developer asks for. If it isn't
   Markdown, tell us and we'll convert them.
 - Agree the byline order and the titles. Post 1 has three title options at
   the top.
