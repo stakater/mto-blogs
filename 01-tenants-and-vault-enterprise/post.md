@@ -33,9 +33,13 @@ This article shows a different approach. You define each team once, on the
 cluster, as a **tenant**. That one boundary is then carried into Vault
 automatically. Every tenant gets its own Vault namespace, every app asks for
 its secrets with an annotation, and the Vault configuration keeps up as
-teams change. It's built from open source projects that are already in use
-in OpenShift shops: Multi-Tenant Operator, Vault Config Operator from the
-Red Hat Community of Practice, External Secrets Operator and Reloader.
+teams change.
+
+The tenant comes from **Multi-Tenant Operator**, a Red Hat certified
+operator from Stakater. It's a commercial product, with a free Basic edition
+that manages up to two tenants, with no expiry. The rest is open source
+already in use in OpenShift shops: Vault Config Operator from the Red Hat
+Community of Practice, External Secrets Operator and Reloader.
 
 **In this article:**
 
@@ -166,8 +170,8 @@ other. Nobody runs a Vault command for any of it.
 
 ## How it works
 
-No new controller writes to Vault. The extension combines open source
-projects that are already in use in OpenShift shops:
+No new controller writes to Vault. Multi-Tenant Operator, and the Template
+Operator it ships, own the tenants. Open source projects do the rest:
 
 | Component | Role |
 |---|---|
