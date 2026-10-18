@@ -52,18 +52,10 @@ would double it and mix two questions. Each post says so where it ends.
 
 ## Writing rules
 
-- **Problem first, product second.** Red Hat editors reject pitches. The
-  post describes an OpenShift problem and shows the tenant solving it.
-- **Name "Multi-Tenant Operator" in full, never "MTO".** Mention it by name
-  three to five times in a post.
-- **"Tenant" is the team boundary.** Always write "Vault namespace" in full
-  so readers don't confuse it with a Kubernetes namespace.
-- **Claim only what is tested.** The source of truth is each extension's
-  repository: its README, and the e2e suite.
-- **No prices, no comparisons with competitors, no "replace".** Red Hat and
-  HashiCorp products come across positively.
-- **Use one voice.** The lead author writes the draft. Co-authors add their
-  sections and review through pull requests.
+The full rules are in [CLAUDE.md](CLAUDE.md). The short version: this series
+is go-to-market for Multi-Tenant Operator. We write as Stakater, Multi-Tenant
+Operator is the hero of every post, and every post ends with the way to try
+it and to buy it. The tone is factual, not pushy.
 
 ## Workflow
 

@@ -503,6 +503,21 @@ next pair of posts in this series.
 The free edition stops at two tenants. When a third team arrives, that's
 where Multi-Tenant Operator Enterprise comes in.
 
+## About Multi-Tenant Operator
+
+Multi-Tenant Operator, from Stakater, turns a shared OpenShift cluster into
+a platform of tenants. Each team is defined once, and that boundary reaches
+its projects, its access, its quotas, its costs and, through extensions,
+tools such as Vault. It's a Red Hat certified operator, available in
+OperatorHub.
+
+- **Try it free:** the Basic edition manages up to two tenants, with no
+  expiry and no capability held back.
+- **Learn more:** [docs.stakater.com/mto](https://docs.stakater.com/mto/)
+- **Running more than two teams?** Multi-Tenant Operator Enterprise adds
+  unlimited tenants and a support commitment. Contact
+  [sales@stakater.com](mailto:sales@stakater.com).
+
 ---
 
 *Rafael [surname], [role], Red Hat. Rasheed Amir, [role], Stakater.

@@ -55,7 +55,8 @@ Community of Practice, External Secrets Operator and Reloader.
 **Who it's for:** platform engineers and architects who run OpenShift with
 Vault Enterprise, and the people who own Vault in those organizations. You
 should be familiar with OpenShift projects and with Vault basics, such as
-policies and auth methods. You don't need to know Multi-Tenant Operator.
+policies and auth methods. If Multi-Tenant Operator is new to you, this is
+a good place to meet it: the article introduces it from the ground up.
 
 **Want to build it?** The companion tutorial,
 [Hands-on: tenants on OpenShift, carried into Vault Enterprise](https://github.com/stakater/mto-blogs/tree/main/02-try-it-tenants-and-vault-enterprise),
@@ -341,6 +342,21 @@ doesn't need: an identity provider with groups, and a change to how
 OpenShift signs people in. Covered here, it would double the tutorial and
 mix two different questions. Next time, we connect both through one
 login, and the same tenant decides what each person sees everywhere.
+
+## About Multi-Tenant Operator
+
+Multi-Tenant Operator, from Stakater, turns a shared OpenShift cluster into
+a platform of tenants. Each team is defined once, and that boundary reaches
+its projects, its access, its quotas, its costs and, through extensions,
+tools such as Vault. It's a Red Hat certified operator, available in
+OperatorHub.
+
+- **Try it free:** the Basic edition manages up to two tenants, with no
+  expiry and no capability held back.
+- **Learn more:** [docs.stakater.com/mto](https://docs.stakater.com/mto/)
+- **Running more than two teams?** Multi-Tenant Operator Enterprise adds
+  unlimited tenants and a support commitment. Contact
+  [sales@stakater.com](mailto:sales@stakater.com).
 
 ---
 
