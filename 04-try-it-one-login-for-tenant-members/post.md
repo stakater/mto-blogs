@@ -3,7 +3,7 @@
 <!--
 Outlet: Red Hat Developer (tutorial), then the Stakater blog, canonical link back.
 Companion to post 3, "One login, every tool", which explains why.
-Continues on the cluster from post 2. Rafael (Red Hat) validates every step before submitting.
+Continues on the cluster from post 2. Raffaele (Red Hat) validates every step before submitting.
 Screenshots: each "Screenshot to capture" line is a slot; the files are listed in screenshots/README.md.
 -->
 
@@ -474,5 +474,4 @@ OperatorHub.
 
 ---
 
-*Rafael [surname], [role], Red Hat. Rasheed Amir, [role], Stakater.
-Aisha [surname], [role], Stakater.*
+*Ayesha Arshad, Stakater. Rasheed Amir, Stakater. Raffaele Spazzoli, Red Hat.*

@@ -8,7 +8,7 @@ Every post should raise the chance that a reader installs it, and later buys
 it.
 
 We write as **Stakater**: Multi-Tenant Operator is our product. Red Hat
-(Rafael) co-authors and publishes, and IBM HashiCorp may tell its own
+(Raffaele) co-authors and publishes, and IBM HashiCorp may tell its own
 version, but the series exists to sell Multi-Tenant Operator, and the posts
 must make that clear.
 

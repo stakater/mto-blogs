@@ -3,7 +3,7 @@
 <!--
 Outlet: Red Hat Developer (tutorial), then the Stakater blog, canonical link back.
 Companion to post 1, "One tenant, from OpenShift to Vault Enterprise", which explains why.
-Rafael (Red Hat) validates every step on his own cluster before submitting.
+Raffaele (Red Hat) validates every step on his own cluster before submitting.
 Screenshots: each "Screenshot to capture" line is a slot, filled during the validation run;
 the file names are listed in screenshots/README.md.
 -->
@@ -528,5 +528,4 @@ OperatorHub.
 
 ---
 
-*Rafael [surname], [role], Red Hat. Rasheed Amir, [role], Stakater.
-Aisha [surname], [role], Stakater.*
+*Ayesha Arshad, Stakater. Rasheed Amir, Stakater. Raffaele Spazzoli, Red Hat.*

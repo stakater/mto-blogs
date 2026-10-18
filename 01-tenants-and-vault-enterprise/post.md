@@ -2,8 +2,8 @@
 
 <!--
 Outlet: Red Hat Developer (then the Stakater blog, canonical link back).
-Rafael (Red Hat) validates the guide on his own cluster and submits the post.
-Authors: Rafael (Red Hat), Rasheed Amir (Stakater), Aisha (Stakater). Byline order to agree.
+Raffaele (Red Hat) validates the guide on his own cluster and submits the post.
+Authors: Ayesha Arshad (Stakater), Rasheed Amir (Stakater), Raffaele Spazzoli (Red Hat).
 Target: about 2,000 words. Reader: platform engineers running OpenShift and Vault.
 Title options:
   - One tenant, from OpenShift to Vault Enterprise
@@ -379,5 +379,4 @@ OperatorHub.
 
 ---
 
-*Rafael [surname], [role], Red Hat. Rasheed Amir, [role], Stakater.
-Aisha [surname], [role], Stakater.*
+*Ayesha Arshad, Stakater. Rasheed Amir, Stakater. Raffaele Spazzoli, Red Hat.*

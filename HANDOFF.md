@@ -1,4 +1,4 @@
-# Rafael: validating and publishing the posts
+# Raffaele: validating and publishing the posts
 
 Thank you for publishing these with us. There are two pairs, each an
 explainer and its tutorial:
@@ -69,7 +69,7 @@ Post 4 continues on the same cluster after post 2.
 
 - Submit the posts in the format Red Hat Developer asks for. If it isn't
   Markdown, tell us and we'll convert them.
-- Agree the byline order and the titles. Post 1 has three title options at
+- Agree the titles. Each explainer has three title options at
   the top.
 - On publish day we make this repository public, so the example files are
   there for readers. Please give us the date ahead of time.

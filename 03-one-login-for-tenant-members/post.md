@@ -3,7 +3,7 @@
 <!--
 Outlet: Red Hat Developer (explainer), then the Stakater blog, canonical link back.
 Follows posts 1 and 2 (tenants and Vault, for apps). Its tutorial is post 4.
-Authors: Rafael (Red Hat), Rasheed Amir (Stakater), Aisha (Stakater). Byline order to agree.
+Authors: Ayesha Arshad (Stakater), Rasheed Amir (Stakater), Raffaele Spazzoli (Red Hat).
 Target: about 1,800 words.
 Title options:
   - One login, every tool: tenant members on OpenShift and Vault
@@ -267,5 +267,4 @@ OperatorHub.
 
 ---
 
-*Rafael [surname], [role], Red Hat. Rasheed Amir, [role], Stakater.
-Aisha [surname], [role], Stakater.*
+*Ayesha Arshad, Stakater. Rasheed Amir, Stakater. Raffaele Spazzoli, Red Hat.*
