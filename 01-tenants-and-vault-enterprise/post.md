@@ -304,6 +304,12 @@ parent, including your existing Vault namespaces and configuration, is out
 of its reach. The whole policy is about 40 rules, short enough for your
 Vault team to review before anything is installed.
 
+One thing to be clear about: inside the tenants' Vault namespaces, Vault
+Config Operator decides who may read which secrets. That's its job. So
+treat permission to create its resources on the cluster, in the
+`vault-config` namespace, like administrator access to the tenants' part of
+Vault, and keep it with the platform team.
+
 ### What the tests prove
 
 Each of these is covered by the extension's end-to-end tests on Vault
