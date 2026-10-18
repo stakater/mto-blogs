@@ -5,7 +5,7 @@ explainer and its tutorial:
 
 | Post | Type | What it does |
 |---|---|---|
-| [1. One tenant, from OpenShift to Vault Enterprise](01-tenants-and-vault-enterprise/post.md) | Explainer, about 1,500 words | Why: the problem, the tenant, one Vault namespace per tenant, how it works, guardrails |
+| [1. One tenant, from OpenShift to Vault Enterprise](01-tenants-and-vault-enterprise/post.md) | Explainer, about 2,400 words | Why: the problem, the tenant, one Vault namespace per tenant, how it works, guardrails |
 | [2. Hands-on: tenants on OpenShift, carried into Vault Enterprise](02-try-it-tenants-and-vault-enterprise/post.md) | Tutorial | How: every step from an empty cluster to two isolated tenants, with screenshots |
 | [3. One login, every tool](03-one-login-for-tenant-members/post.md) | Explainer | Why: one group in the identity provider decides what a person sees in OpenShift and Vault, through the tenant and Multi-Tenant Operator's Dex |
 | [4. Hands-on: one login for tenant members](04-try-it-one-login-for-tenant-members/post.md) | Tutorial | How: Keycloak behind Dex, OpenShift and Vault as clients; Anna signs in, is refused in the other team, and loses access when she leaves |
@@ -13,8 +13,8 @@ explainer and its tutorial:
 Each explainer links to its tutorial. A pair can go out together or a week
 apart; the second pair follows the first.
 
-What we need from you: read post 1, run post 2 on your own cluster, tell us
-what breaks, then submit both to Red Hat Developer.
+What we need from you: read the explainers, run the two tutorials on your
+own cluster, tell us what breaks, then submit them to Red Hat Developer.
 
 ## 1. Read post 1
 
