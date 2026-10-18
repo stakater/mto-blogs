@@ -2,35 +2,37 @@
 
 ## Why this repository exists
 
-**This series is go-to-market for Multi-Tenant Operator.** Its purpose is to
-make more people aware of Multi-Tenant Operator and to win customers for it.
-Every post should raise the chance that a reader installs it, and later buys
-it.
+**This series is co-marketing between Stakater and Red Hat,** with IBM
+HashiCorp possibly telling its own version of the story. Each side has a
+goal, and every post has to serve both:
 
-We write as **Stakater**: Multi-Tenant Operator is our product. Red Hat
-co-authors and publishes, and IBM HashiCorp may tell its own
-version, but the series exists to sell Multi-Tenant Operator, and the posts
-must make that clear.
+- **Stakater:** more platform teams know Multi-Tenant Operator, try it, and
+  adopt it.
+- **Red Hat:** a strong, practical story for OpenShift customers, with Red
+  Hat products shown at their best.
+
+Multi-Tenant Operator is Stakater's product, and the posts are open about
+it. The reader should always know what it is, what it did in the story, and
+how to get it.
 
 ## What every post must do
 
-- **Make Multi-Tenant Operator the hero.** The reader should finish the post
-  knowing what Multi-Tenant Operator is, what it did for them in the story,
-  and that it comes from Stakater. Never let it read as an incidental or
-  optional component.
-- **Lead from the reader's problem, and land on Multi-Tenant Operator as the
-  answer.** Keep the tone factual and confident, not pushy. That keeps Red
-  Hat's editors on side and is more persuasive.
-- **Give a clear way in.** Every post ends with the path to Multi-Tenant
-  Operator:
+- **Make Multi-Tenant Operator central to the story.** The reader should
+  finish the post knowing what Multi-Tenant Operator is, what it did for
+  them, and that it comes from Stakater. Never let it read as an incidental
+  or optional component.
+- **Lead from the reader's problem.** Show the problem on OpenShift first,
+  then how Multi-Tenant Operator and the other pieces solve it. Keep the
+  tone factual and confident, never pushy.
+- **Give a clear way in.** Every post ends with the "About Multi-Tenant
+  Operator" section:
   - install it from OperatorHub, with the free Basic edition (two tenants,
     no expiry)
   - the docs at https://docs.stakater.com/mto/
-  - Enterprise when a third tenant arrives, via sales@stakater.com
-  Include the "About Multi-Tenant Operator" closing section.
-- **Tutorials stop at the free edition's limit on purpose.** Two tenants is
-  enough to prove the model. The third tenant is where Enterprise begins, and
-  the tutorial says so.
+  - Enterprise for more than two tenants, via sales@stakater.com
+- **Tutorials fit the free edition.** Two tenants is enough to prove the
+  model, so anyone can follow a tutorial without a license. The tutorial
+  says where Enterprise comes in.
 
 ## Facts to get right
 
@@ -44,7 +46,8 @@ must make that clear.
 - Template Operator ships with Multi-Tenant Operator (1.10.0+, Managed mode).
 - **Claim only what is tested.** The source of truth is each extension's
   repository: its README and its end-to-end suite. Say plainly what isn't
-  supported yet (for Vault Enterprise: transit, PKI, cert-manager).
+  supported yet. For Vault Enterprise, PKI and transit are on the roadmap,
+  PKI first. Never give a delivery date unless engineering has one.
 - **No prices** in posts. Name the editions, never the figures.
 
 ## Style

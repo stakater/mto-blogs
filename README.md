@@ -6,8 +6,7 @@ holding the draft, its screenshots and the examples readers run.
 
 Topics come in pairs: an **explainer** (why, for the people deciding) and a
 **tutorial** (how, for the engineer who tries it). The explainer links to the
-tutorial, and the tutorial ends at the point where a third tenant needs
-Enterprise.
+tutorial.
 
 **This repository is private until post 1 is published.** It becomes public
 on the day Red Hat publishes, so the examples are there when readers arrive.
@@ -16,16 +15,15 @@ Red Hat post.
 
 ## Why we write these
 
-The goal is to bring in Multi-Tenant Operator customers. The route there:
+Platform teams on OpenShift keep asking the same question: how do many teams
+share a cluster, and the tools around it, without stepping on each other?
+These posts answer it with Multi-Tenant Operator and the Red Hat and
+HashiCorp products those teams already run.
 
-1. A platform engineer reads about a problem they have on OpenShift.
-2. They install Multi-Tenant Operator from OperatorHub. The Basic edition is
-   free and has no expiry, with a limit of two tenants.
-3. They run the post's example with their own two tenants.
-4. When the third team arrives, they need Enterprise.
-
-So every post needs to be something a reader can try. If the example doesn't
-run on a clean cluster with two tenants, the post isn't ready.
+Every post should be something a reader can try. The tutorials fit
+Multi-Tenant Operator's free Basic edition, which manages two tenants, so
+anyone can follow them on their own cluster. If an example doesn't run on a
+clean cluster, the post isn't ready.
 
 ## Authors
 
@@ -52,10 +50,8 @@ would double it and mix two questions. Each post says so where it ends.
 
 ## Writing rules
 
-The full rules are in [CLAUDE.md](CLAUDE.md). The short version: this series
-is go-to-market for Multi-Tenant Operator. We write as Stakater, Multi-Tenant
-Operator is the hero of every post, and every post ends with the way to try
-it and to buy it. The tone is factual, not pushy.
+The full rules are in [CLAUDE.md](CLAUDE.md): what every post must do, the
+facts to get right, and the style.
 
 ## Workflow
 
