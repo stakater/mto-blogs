@@ -2,7 +2,6 @@
 
 <!--
 Outlet: Red Hat Developer (then the Stakater blog, canonical link back).
-Raffaele (Red Hat) validates the guide on his own cluster and submits the post.
 Authors: Ayesha Arshad (Stakater), Rasheed Amir (Stakater), Raffaele Spazzoli (Red Hat).
 Target: about 2,000 words. Reader: platform engineers running OpenShift and Vault.
 Title options:

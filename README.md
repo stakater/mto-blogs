@@ -7,7 +7,7 @@ holding the draft, its screenshots and the examples readers run.
 Topics come in pairs: an **explainer** (why, for the people deciding) and a
 **tutorial** (how, for the engineer who tries it). The explainer links to the
 tutorial, and the tutorial ends at the point where a third tenant needs
-Enterprise. [HANDOFF.md](HANDOFF.md) is what Raffaele validates and submits.
+Enterprise.
 
 **This repository is private until post 1 is published.** It becomes public
 on the day Red Hat publishes, so the examples are there when readers arrive.

@@ -3,7 +3,7 @@
 <!--
 Outlet: Red Hat Developer (tutorial), then the Stakater blog, canonical link back.
 Companion to post 3, "One login, every tool", which explains why.
-Continues on the cluster from post 2. Raffaele (Red Hat) validates every step before submitting.
+Continues on the cluster from post 2.
 Screenshots: each "Screenshot to capture" line is a slot; the files are listed in screenshots/README.md.
 -->
 
