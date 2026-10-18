@@ -4,22 +4,59 @@
 Outlet: Red Hat Developer (then the Stakater blog, canonical link back).
 Rafael (Red Hat) validates the guide on his own cluster and submits the post.
 Authors: Rafael (Red Hat), Rasheed Amir (Stakater), Aisha (Stakater). Byline order to agree.
-Target: about 1,600 words. Reader: platform engineers running OpenShift and Vault.
+Target: about 2,000 words. Reader: platform engineers running OpenShift and Vault.
 Title options:
   - One tenant, from OpenShift to Vault Enterprise
   - Give every team its own Vault namespace on OpenShift, automatically
   - Multi-tenancy on OpenShift that reaches all the way into Vault
 -->
 
-Most OpenShift platforms reach the same point. The cluster is shared, dozens
-of teams deploy to it, and every one of them needs secrets. Vault Enterprise
-holds those secrets. But Vault doesn't know who your teams are, and OpenShift
-doesn't tell it.
+Every platform team running a shared OpenShift cluster meets the same
+question sooner or later. Forty teams deploy to the cluster, and every one
+of them needs secrets: database passwords, API keys, tokens. **How
+does each team get its own secrets, and only its own, without the platform
+team doing it by hand?**
 
-So the platform team fills the gap by hand. This post shows a different
-approach: you define the team once on the cluster, as a **tenant**, and that
-boundary carries into Vault automatically, all the way to the secret inside
-a running pod.
+On the cluster itself, the answer is well understood. OpenShift projects,
+role-based access control, quotas and network policies keep workloads
+apart. But the secrets usually live somewhere else, in HashiCorp Vault
+Enterprise, because that's the system the security team trusts with them.
+Vault has its own model for keeping things apart: Vault namespaces,
+policies and auth methods. That model knows nothing about the teams on your
+cluster.
+
+So there are two systems, with two separate ideas of who a team is, and
+nothing keeps them in step. In most organizations, that "nothing" is a
+platform engineer working through a queue of tickets.
+
+This article shows a different approach. You define each team once, on the
+cluster, as a **tenant**. That one boundary is then carried into Vault
+automatically. Every tenant gets its own Vault namespace, every app asks for
+its secrets with an annotation, and the Vault configuration keeps up as
+teams change. It's built from open source projects that are already in use
+in OpenShift shops: Multi-Tenant Operator, Vault Config Operator from the
+Red Hat Community of Practice, External Secrets Operator and Reloader.
+
+**In this article:**
+
+- what onboarding a single team into Vault Enterprise takes today, and
+  where that breaks down
+- the tenant: a team as a first-class object on OpenShift
+- how one tenant becomes one Vault namespace, and what's automated along
+  the way
+- how the pieces fit together, including an upstream change to Vault Config
+  Operator that made this possible
+- the guardrails Vault owners will ask about
+
+**Who it's for:** platform engineers and architects who run OpenShift with
+Vault Enterprise, and the people who own Vault in those organizations. You
+should be familiar with OpenShift projects and with Vault basics, such as
+policies and auth methods. You don't need to know Multi-Tenant Operator.
+
+**Want to build it?** The companion tutorial,
+[Hands-on: tenants on OpenShift, carried into Vault Enterprise](https://github.com/stakater/mto-blogs/tree/main/02-try-it-tenants-and-vault-enterprise),
+takes you through every step on your own cluster. This article explains the
+why and the how, so you know what you're building.
 
 ## What one team costs in Vault
 
