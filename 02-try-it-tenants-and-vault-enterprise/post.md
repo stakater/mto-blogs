@@ -334,8 +334,27 @@ Operator** and the **Tenant** tab:
 
 ![Multi Tenant Operator's Tenant tab: acme and globex, both Ready](screenshots/04-mto-tenants.png)
 
-Multi-Tenant Operator's own console shows the same tenants from a team's
-point of view: each tenant with its projects and its quota.
+Multi-Tenant Operator also has its own console, which shows each tenant
+with its projects, quota and costs. Switch it on, and let its built-in
+account see every tenant:
+
+```bash
+oc -n multi-tenant-operator patch integrationconfig tenant-operator-config --type merge -p '{
+  "spec": {
+    "components": {"console": true, "showback": true},
+    "accessControl": {"privileged": {"users": ["mto@stakater.com"]}}
+  }}'
+
+oc -n multi-tenant-operator get routes | grep console
+```
+
+Open the console's route in your browser and sign in with the built-in
+account: username `mto`, password `mto`.
+
+**In production,** connect your identity provider and delete this account.
+It has a well-known password and sees every tenant. The fourth post in this
+series connects an identity provider, and the Multi-Tenant Operator docs
+describe [removing the default login](https://docs.stakater.com/mto/latest/getting-started/production-readiness.html).
 
 > 📷 **Screenshot to capture:** the Multi-Tenant Operator console, tenant
 > `acme`, showing its project `acme-shop` and its quota `small`.
