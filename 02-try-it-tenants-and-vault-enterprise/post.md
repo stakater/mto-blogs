@@ -326,8 +326,7 @@ oc apply -f tenants.yaml
 Multi-Tenant Operator creates the projects `acme-shop` and `globex-web`, and
 labels each with its tenant.
 
-> 📷 **Screenshot to capture:** the OpenShift console, project `acme-shop`,
-> **Details** tab, with the label `stakater.com/tenant=acme`.
+![Project acme-shop, Details tab: among its labels, stakater.com/tenant=acme](screenshots/07-project-tenant-label.png)
 
 In the console, open **Ecosystem → Installed Operators → Multi Tenant
 Operator** and the **Tenant** tab:
@@ -402,9 +401,10 @@ namespace, so you can see it, review it and keep it in Git:
 oc -n vault-config get namespaces.redhatcop.redhat.io,secretenginemounts.redhatcop.redhat.io
 ```
 
-> 📷 **Screenshot to capture:** the OpenShift console, **Home → API
-> Explorer** (or **Search**), the Vault Config Operator `Namespace` resources
-> in `vault-config`: `acme`, `globex` and `shared`.
+In the console, the same resources are under **Home → Search**, project
+`vault-config`, resource **Namespace** (`redhatcop.redhat.io`):
+
+![Search in project vault-config: the Vault Config Operator Namespace resources acme, globex and shared](screenshots/09-vco-resources.png)
 
 ## Step 8: Deploy an app that reads its secret
 
@@ -452,19 +452,15 @@ The app prints the length of the password, not the password.
 
 ![The Vault UI in namespace acme: the secret dev/acme-shop/checkout/db, with the key password](screenshots/06-vault-checkout-secret.png)
 
-In the same Vault namespace, open **Policies**. The app's policy is there,
-and nobody wrote it:
+In the same Vault namespace, open **Access control → ACL policies**. The
+app's policy is there, and nobody wrote it:
 
-> 📷 **Screenshot to capture:** the Vault UI in namespace `acme`,
-> **Policies**, showing `kv.acme.acme-shop.checkout`, opened to its rules:
-> access to `dev/acme-shop/checkout/` only.
+![The Vault UI in namespace acme: the ACL policy kv.acme.acme-shop.checkout, granting the app's own path and its project's _shared area](screenshots/10-vault-acme-policy.png)
 
 On the cluster, the password arrived as an ordinary Secret, owned by the
 `ExternalSecret` that keeps it in step with Vault:
 
-> 📷 **Screenshot to capture:** the OpenShift console, project `acme-shop`,
-> **Workloads → Secrets → checkout-db**, showing the key `password` (value
-> hidden) and the owner `ExternalSecret checkout-db`.
+![Secret checkout-db in project acme-shop: owner ExternalSecret checkout-db, and the key password with its value hidden](screenshots/11-openshift-secret-checkout-db.png)
 
 **What just happened:** the extension gave `checkout` a Vault policy and a
 login role in tenant `acme`'s Vault namespace, limited to its own path.
@@ -504,8 +500,7 @@ the new pod started with the new password.
 
 In the Vault UI, the secret now has two versions:
 
-> 📷 **Screenshot to capture:** the Vault UI in namespace `acme`, the secret
-> `dev/acme-shop/checkout/db`, **Version History**, showing versions 1 and 2.
+![The Vault UI in namespace acme: Version History of dev/acme-shop/checkout/db, with versions 1 and 2](screenshots/12-vault-secret-versions.png)
 
 ## Step 10: Check the isolation
 
