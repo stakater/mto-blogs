@@ -7,4 +7,4 @@ metadata:
   namespace: globex-web
   annotations:
     vault.stakater.com/kv: "true"
-    vault.stakater.com/tier: editor
+    vault.stakater.com/role: editor

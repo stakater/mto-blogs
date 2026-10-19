@@ -1,11 +1,24 @@
 # Two tenants: the Basic edition's limit, and enough to see isolation.
 # Multi-Tenant Operator creates acme-shop and globex-web, and labels each
 # with stakater.com/tenant: <tenant>, the label the Vault extension keys on.
+#
+# Every tenant names a Quota. This one only caps the number of pods, so the
+# tutorial's apps run without CPU or memory requests.
+apiVersion: tenantoperator.stakater.com/v1beta1
+kind: Quota
+metadata:
+  name: small
+spec:
+  resourcequota:
+    hard:
+      pods: "10"
+---
 apiVersion: tenantoperator.stakater.com/v1beta3
 kind: Tenant
 metadata:
   name: acme
 spec:
+  quota: small
   accessControl:
     owners:
       users:
@@ -19,6 +32,7 @@ kind: Tenant
 metadata:
   name: globex
 spec:
+  quota: small
   accessControl:
     owners:
       users:

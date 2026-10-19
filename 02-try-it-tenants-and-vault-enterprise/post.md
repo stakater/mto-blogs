@@ -41,10 +41,10 @@ Here's what you'll install:
 
 | Component | Version | From | Job |
 |---|---|---|---|
-| Multi-Tenant Operator | 1.10.0 or later | OperatorHub | Owns the tenants, and runs Template Operator |
-| Vault Enterprise | 2.1.1 | HashiCorp Helm chart | Holds the secrets |
+| Multi-Tenant Operator | 1.10.0 or later | Software Catalog (OperatorHub) | Owns the tenants, and runs Template Operator |
+| Vault Enterprise | 2.1.1 | HashiCorp Helm chart, Red Hat certified image | Holds the secrets |
 | Vault Config Operator | v1.0.3 or later | Red Hat Community of Practice Helm chart | Writes Vault configuration from Kubernetes resources |
-| External Secrets Operator | current | OperatorHub | Copies secrets from Vault into Kubernetes Secrets |
+| External Secrets Operator | current | Software Catalog (OperatorHub) | Copies secrets from Vault into Kubernetes Secrets |
 | Reloader | current | Stakater Helm chart | Rolls pods when their Secret changes |
 | Vault Enterprise extension | current | `oci://ghcr.io/stakater/charts` | Turns each tenant into Vault configuration |
 
@@ -53,17 +53,20 @@ up to two tenants. That's exactly what this tutorial uses.
 
 ## Step 1: Install Multi-Tenant Operator
 
-In the OpenShift console, go to **Operators → OperatorHub** and search for
-**Multi-Tenant Operator**.
+In the OpenShift console, go to **Ecosystem → Software Catalog** (on older
+versions, **Operators → OperatorHub**) and search for **multi tenant**. The
+tile is named **Multi Tenant Operator**, without the hyphen, so a search for
+"multi-tenant" doesn't find it.
 
-> 📷 **Screenshot to capture:** OperatorHub search results showing the
-> Multi-Tenant Operator tile, with the "Certified" badge.
+![Software Catalog search for "multi tenant": the Multi Tenant Operator tile by Stakater, with the Certified badge](screenshots/01-operatorhub-mto.png)
 
 Click **Install** and keep the defaults. The operator installs into the
 `multi-tenant-operator` namespace.
 
-> 📷 **Screenshot to capture:** Installed Operators, with Multi-Tenant
-> Operator showing "Succeeded".
+![Installed Operators in multi-tenant-operator: Multi Tenant Operator and the operators it brings, all Succeeded](screenshots/02-installed-mto.png)
+
+Multi-Tenant Operator brings three companions with it: Template Operator,
+Hibernation Operator and MTO Dependencies Operator.
 
 Multi-Tenant Operator ships with Template Operator, which the extension
 uses to render configuration for every tenant. Switch it on:
@@ -83,6 +86,39 @@ oc get deploy -A -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.
 export TOP_NS=<namespace from the output>
 export TOP_SA=<ServiceAccount from the output>
 ```
+
+Multi-Tenant Operator now guards every namespace on the cluster. A new
+namespace needs a tenant label, unless Multi-Tenant Operator lists it as
+privileged. Even a cluster admin gets this refusal:
+
+```
+admission webhook "vnamespace.kb.io" denied the request: '<you>' cannot 'create'
+namespace 'vault-config-operator' without label 'stakater.com/tenant'
+```
+
+The tools you install next are for the platform, not for a team. Add their
+namespaces to the privileged list:
+
+```bash
+oc -n multi-tenant-operator patch integrationconfig tenant-operator-config --type json -p '[
+  {"op":"add","path":"/spec/accessControl/privileged/namespaces/-","value":"^vault$"},
+  {"op":"add","path":"/spec/accessControl/privileged/namespaces/-","value":"^vault-config$"},
+  {"op":"add","path":"/spec/accessControl/privileged/namespaces/-","value":"^vault-config-operator$"},
+  {"op":"add","path":"/spec/accessControl/privileged/namespaces/-","value":"^external-secrets$"},
+  {"op":"add","path":"/spec/accessControl/privileged/namespaces/-","value":"^external-secrets-operator$"},
+  {"op":"add","path":"/spec/accessControl/privileged/namespaces/-","value":"^reloader$"}
+]'
+```
+
+The patch appends to the defaults (`default`, `openshift*`, `kube*`) and
+keeps them. It covers the operators too: External Secrets Operator creates
+and labels its own `external-secrets` namespace, and it's refused without
+this list.
+
+**In production,** give the platform tools a tenant of their own, such as
+`platform`, so Multi-Tenant Operator manages their access like any team's.
+This tutorial uses privileged namespaces to stay within the free edition's
+two tenants.
 
 ## Step 2: Install Vault Enterprise
 
@@ -104,8 +140,8 @@ helm upgrade --install vault hashicorp/vault --version 0.34.1 -n vault \
   --set server.dev.enabled=true \
   --set server.dev.devRootToken=root \
   --set server.authDelegator.enabled=true \
-  --set server.image.repository=hashicorp/vault-enterprise \
-  --set server.image.tag=2.1.1-ent \
+  --set server.image.repository=registry.connect.redhat.com/hashicorp/vault-enterprise \
+  --set server.image.tag=2.1.1-ent-ubi \
   --set server.enterpriseLicense.secretName=vault-ent-license \
   --set injector.enabled=false \
   --set ui.enabled=true
@@ -113,6 +149,11 @@ helm upgrade --install vault hashicorp/vault --version 0.34.1 -n vault \
 oc -n vault wait --for=condition=Ready pod/vault-0 --timeout=300s
 oc -n vault create route edge vault-ui --service=vault
 ```
+
+The image is the Red Hat certified build of Vault Enterprise, from
+`registry.connect.redhat.com`, which your cluster's pull secret already
+covers. Write the registry out in full: OpenShift maps the short name
+`hashicorp/vault-enterprise` to that registry, where the tags end in `-ubi`.
 
 Define two shell helpers that run the `vault` CLI inside the pod. `v` uses
 the root token. `vt` uses a token you pass in, so you can act as an app:
@@ -155,13 +196,13 @@ Two settings matter here:
 
 ## Step 4: Install External Secrets Operator and Reloader
 
-In **Operators → OperatorHub**, install **External Secrets Operator for Red
-Hat OpenShift** with the defaults.
+In **Ecosystem → Software Catalog**, install **External Secrets Operator for
+Red Hat OpenShift** with the defaults.
 
-> 📷 **Screenshot to capture:** the External Secrets Operator for Red Hat
-> OpenShift tile in OperatorHub.
+![Software Catalog search for "external secrets": the External Secrets Operator for Red Hat OpenShift tile](screenshots/03-operatorhub-eso.png)
 
-Then tell it to deploy External Secrets Operator:
+Then tell it to deploy External Secrets Operator. The operator isolates its
+pods with deny-all network policies, so also let the controller reach Vault:
 
 ```bash
 cat <<'YAML' | oc apply -f -
@@ -169,19 +210,43 @@ apiVersion: operator.openshift.io/v1alpha1
 kind: ExternalSecretsConfig
 metadata:
   name: cluster
-spec: {}
+spec:
+  controllerConfig:
+    networkPolicies:
+      - name: allow-egress-to-vault
+        componentName: ExternalSecretsCoreController
+        egress:
+          - to:
+              - namespaceSelector:
+                  matchLabels:
+                    kubernetes.io/metadata.name: vault
+            ports:
+              - protocol: TCP
+                port: 8200
 YAML
 
-oc get crd externalsecrets.external-secrets.io
+oc wait externalsecretsconfig/cluster --for=condition=Ready --timeout=300s
+oc -n external-secrets rollout status deploy/external-secrets-webhook --timeout=300s
 ```
+
+Wait for the webhook, not only for the `ExternalSecret` CRD. The operator
+installs the CRD before External Secrets Operator itself runs, and it
+reports `Ready` before the pods start.
 
 Install Reloader:
 
 ```bash
 helm repo add stakater https://stakater.github.io/stakater-charts
 helm upgrade --install reloader stakater/reloader -n reloader --create-namespace \
-  --set reloader.isOpenshift=true
+  --set reloader.isOpenshift=true \
+  --set reloader.deployment.securityContext.runAsUser=null
+
+oc -n reloader rollout status deploy/reloader-reloader --timeout=300s
 ```
+
+The chart pins the user ID `65534` by default, which OpenShift's
+`restricted-v2` security context constraint refuses. Setting it to `null`
+lets OpenShift assign one from the project's range.
 
 ## Step 5: Give Vault Config Operator its login to Vault
 
@@ -198,6 +263,9 @@ v write auth/kubernetes/role/vco-admin \
   bound_service_account_namespaces=vault-config \
   token_policies=vco-admin token_ttl=1h
 ```
+
+Vault warns that the role `vco-admin` has no audience configured. That's
+expected here, and you can ignore it.
 
 **What just happened:** the policy in
 [`vco-admin-policy.hcl`](examples/vco-admin-policy.hcl) grants only the
@@ -231,8 +299,9 @@ There are no tenants yet, so Vault has nothing new.
 
 ## Step 7: Create two tenants
 
-[`tenants.yaml`](examples/tenants.yaml) defines two teams. Each has an owner
-and one project:
+[`tenants.yaml`](examples/tenants.yaml) defines two teams. Each has an owner,
+one project and a quota. Every tenant must name a `Quota`, so the file also
+holds a small one, `small`, which only caps the number of pods:
 
 ```yaml
 apiVersion: tenantoperator.stakater.com/v1beta3
@@ -240,6 +309,7 @@ kind: Tenant
 metadata:
   name: acme
 spec:
+  quota: small
   accessControl:
     owners:
       users:
@@ -256,8 +326,10 @@ oc apply -f tenants.yaml
 Multi-Tenant Operator creates the projects `acme-shop` and `globex-web`, and
 labels each with its tenant.
 
-> 📷 **Screenshot to capture:** the Multi-Tenant Operator console showing the
-> tenants `acme` and `globex`.
+In the console, open **Ecosystem → Installed Operators → Multi Tenant
+Operator** and the **Tenant** tab:
+
+![Multi Tenant Operator's Tenant tab: acme and globex, both Ready](screenshots/04-mto-tenants.png)
 
 Within a minute, each tenant has its own Vault namespace:
 
@@ -288,8 +360,7 @@ Open the Vault UI at the route from step 2 and sign in with the token
 echo "https://$(oc -n vault get route vault-ui -o jsonpath='{.spec.host}')"
 ```
 
-> 📷 **Screenshot to capture:** the Vault UI namespace picker, listing
-> `acme`, `globex` and `shared`.
+![The Vault UI namespace picker, listing root, acme, globex and shared](screenshots/05-vault-namespaces.png)
 
 **What just happened:** you created two Kubernetes resources and didn't
 touch Vault. Multi-Tenant Operator labeled the projects. Template Operator
@@ -306,7 +377,7 @@ v kv put -namespace=acme -mount=kv dev/acme-shop/checkout/db password=s3cr3t
 ```
 
 The app, in [`checkout.yaml`](examples/checkout.yaml), asks for access with
-annotations. Its ServiceAccount asks for its own space, at the `editor` tier:
+annotations. Its ServiceAccount asks for its own space, with the `editor` role:
 
 ```yaml
 metadata:
@@ -314,7 +385,7 @@ metadata:
   namespace: acme-shop
   annotations:
     vault.stakater.com/kv: "true"
-    vault.stakater.com/tier: editor
+    vault.stakater.com/role: editor
 ```
 
 Its Deployment asks for one key, and for a restart when that key changes:
@@ -340,8 +411,7 @@ db password has 6 characters
 
 The app prints the length of the password, not the password.
 
-> 📷 **Screenshot to capture:** the Vault UI, signed in to namespace `acme`,
-> showing the secret `dev/acme-shop/checkout/db`.
+![The Vault UI in namespace acme: the secret dev/acme-shop/checkout/db, with the key password](screenshots/06-vault-checkout-secret.png)
 
 **What just happened:** the extension gave `checkout` a Vault policy and a
 login role in tenant `acme`'s Vault namespace, limited to its own path.
@@ -367,6 +437,7 @@ every hour by default. To skip the wait, force a refresh:
 
 ```bash
 oc -n acme-shop annotate externalsecret checkout-db force-sync="$(date +%s)" --overwrite
+sleep 15   # the Secret updates, then Reloader starts the rollout
 oc -n acme-shop rollout status deploy/checkout
 oc -n acme-shop logs deploy/checkout
 ```
@@ -406,7 +477,8 @@ vt "$GLOBEX" kv get -namespace=acme -mount=kv dev/acme-shop/checkout/db
 
 ```
 Code: 403. Errors:
-* permission denied
+
+* preflight capability check returned 403, please ensure client's policies grant access to path "kv/"
 ```
 
 **Refused:** globex's app can't log in with acme's role either:
@@ -414,6 +486,12 @@ Code: 403. Errors:
 ```bash
 ACME_ROLE=$(oc -n acme-shop get configmap vault-config-checkout -o jsonpath='{.data.VAULT_K8S_ROLE}')
 v write -namespace=acme auth/kubernetes/workloads/login role="$ACME_ROLE" jwt="$JWT"
+```
+
+```
+Code: 403. Errors:
+
+* service account name not authorized
 ```
 
 Vault refuses the login, because acme's role trusts only the `checkout`
@@ -435,9 +513,9 @@ difference and rewrote it.
 ## Optional: single sign-on for people
 
 So far, only apps log in. The extension can also give each tenant an OIDC
-login for people, with four tiers: `viewer`, `editor`, `admin` and
-`audit-read`. Each tier maps to an identity-provider group named
-`<tenant>-<tier>s`, such as `acme-editors`.
+login for people, with four roles: `viewer`, `editor`, `admin` and
+`audit-read`. Each role maps to an identity-provider group named
+`<tenant>-<role>s`, such as `acme-editors`.
 
 You need an OIDC identity provider, such as Red Hat build of Keycloak, with
 a client for Vault:
