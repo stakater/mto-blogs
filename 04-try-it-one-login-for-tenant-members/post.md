@@ -263,7 +263,7 @@ oc -n vault-config create secret generic vault-oidc-client-secret \
     -o jsonpath='{.data.client-secret}' | base64 -d)"
 
 helm upgrade mto-extension-vault-enterprise-bootstrap \
-  oci://ghcr.io/stakater/charts/mto-extension-vault-enterprise-bootstrap \
+  oci://ghcr.io/stakater/public/charts/mto-extension-vault-enterprise-bootstrap \
   -n vault-config --reuse-values \
   --set parent.sso.enabled=true \
   --set parent.sso.issuerUrl="$DEX_ISSUER" \
@@ -429,7 +429,7 @@ oc -n openshift-config delete configmap ingress-ca --ignore-not-found
 
 # Vault: turn sign-in for people off again
 helm upgrade mto-extension-vault-enterprise-bootstrap \
-  oci://ghcr.io/stakater/charts/mto-extension-vault-enterprise-bootstrap \
+  oci://ghcr.io/stakater/public/charts/mto-extension-vault-enterprise-bootstrap \
   -n vault-config --reuse-values --set parent.sso.enabled=false
 oc -n vault-config delete secret vault-oidc-client-secret
 

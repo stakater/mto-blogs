@@ -46,7 +46,7 @@ Here's what you'll install:
 | Vault Config Operator | v1.0.3 or later | Red Hat Community of Practice Helm chart | Writes Vault configuration from Kubernetes resources |
 | External Secrets Operator | current | Software Catalog (OperatorHub) | Copies secrets from Vault into Kubernetes Secrets |
 | Reloader, with its console | chart 3.0.0-beta.2 (Reloader v2) | Stakater Helm chart | Rolls pods when their Secret changes, and shows each reload in a free console for up to 3 namespaces |
-| Vault Enterprise extension | current | `oci://ghcr.io/stakater/charts` | Turns each tenant into Vault configuration |
+| Vault Enterprise extension | current | `oci://ghcr.io/stakater/public/charts` | Turns each tenant into Vault configuration |
 
 The Multi-Tenant Operator Basic edition is free with no expiry, and manages
 up to two tenants. That's exactly what this tutorial uses.
@@ -309,7 +309,7 @@ to keep the commands short.
 
 ```bash
 helm upgrade --install mto-extension-vault-enterprise-bootstrap \
-  oci://ghcr.io/stakater/charts/mto-extension-vault-enterprise-bootstrap \
+  oci://ghcr.io/stakater/public/charts/mto-extension-vault-enterprise-bootstrap \
   -n vault-config --create-namespace \
   --set parent.vaultServer=http://vault.vault.svc:8200 \
   --set templateOperator.namespace="$TOP_NS" \
@@ -608,7 +608,7 @@ oc -n vault-config create secret generic vault-oidc-client-secret \
   --from-literal=client-secret='<the client secret>'
 
 helm upgrade mto-extension-vault-enterprise-bootstrap \
-  oci://ghcr.io/stakater/charts/mto-extension-vault-enterprise-bootstrap \
+  oci://ghcr.io/stakater/public/charts/mto-extension-vault-enterprise-bootstrap \
   -n vault-config --reuse-values \
   --set parent.sso.enabled=true \
   --set parent.sso.issuerUrl=https://<your identity provider's issuer URL> \
