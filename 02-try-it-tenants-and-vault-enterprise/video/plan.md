@@ -28,7 +28,7 @@ clean-up, which every version points to in the tutorial.
 ## The demo: the main cut
 
 About 4 minutes. The installs are one fast sequence; most of the time goes
-to what makes it worth trying. The narration is locked in its own
+to what makes it worth trying. The narration is in its own
 [script](narration-demo.md), ready to record.
 
 | # | Part | From the recording | Narration | Time |
