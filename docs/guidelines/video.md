@@ -7,12 +7,24 @@ two cuts from the same footage.
 The rules in [CLAUDE.md](../../CLAUDE.md) apply to every piece. This page
 adds what is specific to video.
 
-## Two cuts
+## Three versions, one recording
 
-| Cut | Length | For | Where |
+Each topic's tutorial is recorded once, in full. Three versions are cut from
+that footage, each with its own narration:
+
+| Version | Length | For | Where |
 |---|---|---|---|
-| **Walkthrough** | The whole tutorial, installs included: usually 15 to 20 minutes, a chapter per step | The engineer who wants to see every step before trying it | YouTube, embedded in the tutorial where allowed, sales demos |
-| **Short cut** | 60 to 90 seconds | Everyone else: the moments that land | LinkedIn, YouTube Shorts, the explainer |
+| **Demo, the main cut** | 3 to 5 minutes | Anyone deciding whether it's worth trying | YouTube, the posts, sales; the link we share by default |
+| **Full walkthrough** | The whole tutorial, installs included: usually 15 to 20 minutes, a chapter per step | The engineer who wants every step on screen before trying it | YouTube, linked from the tutorial |
+| **Short cut** | 60 to 90 seconds | Feeds, mostly watched muted | LinkedIn, YouTube Shorts |
+
+**The demo is the headline.** Most viewers only watch that one. Its setup is
+one fast, labeled sequence of installs and their proofs; most of its time
+goes to the moments where something visibly changes, such as a Vault
+namespace appearing, a pod rolling, or a 403.
+
+**Each version has its own script.** A shorter version needs its own
+sentences, not the long one cut down.
 
 The walkthrough follows the tutorial step by step, with a chapter per step,
 installs included, so the viewer sees that it all installs and works. Every
@@ -20,8 +32,6 @@ chapter has the same rhythm: a card, why, do it, the wait (sped up and
 labeled), show it running, what happened, then a one-second beat. The first
 video's [plan](../../02-try-it-tenants-and-vault-enterprise/video/plan.md#how-every-chapter-runs)
 is the worked example.
-The short cut keeps only the moments where something visibly changes, such
-as a Vault namespace appearing, a pod rolling, or a 403.
 
 ## Shape of the walkthrough
 
@@ -57,8 +67,8 @@ as a Vault namespace appearing, a pod rolling, or a 403.
 
 - **A human voiceover.** One of the authors, recorded after the edit, from a
   written script. No synthetic voice.
-- **Captions on every cut,** burned into the short cut, and as a subtitle
-  file for the walkthrough. Most people watch the short cut muted.
+- **Captions on every version,** burned into the short cut, and as a
+  subtitle file for the demo and the walkthrough. Most people watch the short cut muted.
 - **On-screen labels** name each chapter as the tutorial names the step.
 - **No background music under narration.** Quiet music on the cold open and
   close at most.
@@ -75,8 +85,8 @@ as a Vault namespace appearing, a pod rolling, or a 403.
 - A **shot list and narration script** in the tutorial's `video/` folder,
   scene by scene, before anything is recorded.
 - The **recording scripts** in the same folder, so anyone can re-record.
-- The **outputs:** the walkthrough, the short cut, the subtitle file, and a
-  thumbnail.
+- The **outputs:** the demo, the walkthrough, the short cut, their subtitle
+  files, and thumbnails.
 
 ## Checklist
 
@@ -84,6 +94,6 @@ as a Vault namespace appearing, a pod rolling, or a 403.
 - [ ] Every scene matches a tutorial step; nothing extra.
 - [ ] No secret visible in any frame.
 - [ ] Sped-up parts are labeled.
-- [ ] Human voiceover; captions on both cuts.
+- [ ] Human voiceover, from each version's own script; captions on all three.
 - [ ] Ends with the tutorial link and the free Basic edition.
 - [ ] The recording scripts are committed, so the video can be re-made.

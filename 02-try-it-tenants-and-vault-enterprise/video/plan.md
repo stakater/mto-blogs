@@ -5,22 +5,51 @@ It follows the [video guideline](../../docs/guidelines/video.md).
 
 ## What we want
 
-**The whole tutorial, on screen, from an empty cluster to a boundary that
-holds.** Every step, installs included, so the viewer sees that it all
-installs, starts and works, not only the interesting parts.
+**One recording of the whole tutorial, cut into three versions.** We record
+every step once, from an empty cluster to a boundary that holds. Each
+version is then cut from that footage for a different viewer, with its own
+narration.
 
-| | |
-|---|---|
-| **Walkthrough** | About 17 minutes, one YouTube chapter per tutorial step |
-| **Short cut** | About 75 seconds, from the same footage |
-| **Viewer** | A platform engineer deciding whether to try the tutorial, and anyone who wants to see it working before they do |
-| **They come away knowing** | It installs on OpenShift in about an hour. A tenant becomes a Vault namespace on its own. Apps get secrets with two annotations, and rotations reach the pod. Tenants can't reach each other. It runs on the free Basic edition. |
+| Version | Length | For | Where |
+|---|---|---|---|
+| **Demo, the main cut** | About 4 minutes (3 to 5) | Anyone deciding whether this is worth trying | YouTube, the posts, sales; the link we share by default |
+| **Full walkthrough** | About 17 minutes, a chapter per step | The engineer who wants every step on screen before trying it | YouTube, linked from the tutorial |
+| **Short cut** | About 75 seconds | Feeds, mostly watched muted | LinkedIn, YouTube Shorts |
 
-**In:** steps 1 to 10, as written in the tutorial.
+**They all leave the viewer knowing:** it installs on OpenShift in about an
+hour. A tenant becomes a Vault namespace on its own. Apps get secrets with
+two annotations, and rotations reach the pod. Tenants can't reach each
+other. It runs on the free Basic edition.
+
+**In the recording:** steps 1 to 10, as written in the tutorial.
 **Out:** the optional sign-in section, which is topic 2's subject, and the
-clean-up, which the close points to in the tutorial.
+clean-up, which every version points to in the tutorial.
 
-## How every chapter runs
+## The demo: the main cut
+
+About 4 minutes. The installs are one fast sequence; most of the time goes
+to what makes it worth trying.
+
+| # | Part | From the recording | Narration (draft) | Time |
+|---|---|---|---|---|
+| 1 | **Cold open** | Vault's namespace picker with `acme` and `globex`; the Multi-Tenant Operator console's Tenants page | "Two teams on one OpenShift cluster, each with its own Vault namespace. Nobody wrote a line of Vault configuration." | 0:15 |
+| 2 | **The problem** | Title card; post 1's flow diagram | "OpenShift keeps teams apart. Vault has its own idea of who a team is. Multi-Tenant Operator connects them: define a team once, as a tenant, and Vault follows." | 0:25 |
+| 3 | **Setup** | Chapters 2 to 7 as one sequence, about 6 seconds per piece: each install, then its proof (Certified tile and "Succeeded"; `vault-0` ready; Vault Config Operator, External Secrets Operator and Reloader rolled out; the extension installed). Labeled "Setup, sped up". | "Setup is the Software Catalog and Helm, and the whole tutorial takes about an hour. Multi-Tenant Operator, free for two tenants. Vault Enterprise. Vault Config Operator, External Secrets Operator, Reloader. And the Vault extension for Multi-Tenant Operator." | 0:50 |
+| 4 | **Two tenants** | Chapter 8: the split screen as the Vault namespaces appear; the Multi-Tenant Operator console's Tenants and Namespaces pages | "Create two tenants. Multi-Tenant Operator creates their projects, and within a minute each has its own Vault namespace. We didn't touch Vault." | 0:45 |
+| 5 | **An app gets its secret** | Chapter 9: the two annotations, highlighted; "6 characters"; the policy nobody wrote; the delivered Secret | "An app asks for its secret with two annotations. No Vault token, no ticket. Here's the policy it was given, and nobody wrote it." | 0:40 |
+| 6 | **Rotation** | Chapter 10: the pod rolling; "10 characters"; Reloader's console with two restarts | "Rotate the password in Vault, and the running pod picks it up. Reloader's console keeps the record of what restarted, and why." | 0:30 |
+| 7 | **The boundary holds** | Chapter 11: both `403`s; the hand-widened policy put back | "The other team can't read acme's secret, or borrow its role: 403. And a policy widened by hand is back to normal a minute later." | 0:30 |
+| 8 | **Close** | End card: "Try it free", the tutorial link, the docs link, the Stakater logo | "Every step is in the tutorial, linked below. Try it free, on your own cluster." | 0:15 |
+
+Total: about 4:10.
+
+## The full walkthrough
+
+The whole recording, chapter by chapter. It's what the demo and the short
+cut are cut from, and it's published as its own video for viewers who want
+every step.
+
+### How every chapter runs
 
 Each tutorial step is one chapter, with the same rhythm, so the viewer always
 knows where they are:
@@ -36,7 +65,7 @@ knows where they are:
 | **In production** | Where the tutorial has an "In production" note: a lower-third caption for 3–4 s, not narrated | 3–4 s |
 | **Beat** | One second of stillness before the next card | 1 s |
 
-## On screen
+### On screen
 
 - **Terminal:** full screen at 1920×1080, a clean dark theme, a font at
   least 22 points, and a prompt that shows only `$`. Commands appear typed,
@@ -52,7 +81,7 @@ knows where they are:
 - **A cluster with a neutral name,** because its domain appears in addresses
   on screen.
 
-## Chapters
+### Chapters
 
 Narration is a first draft, to be read aloud and tightened before recording.
 
@@ -74,17 +103,28 @@ Narration is a first draft, to be read aloud and tightened before recording.
 
 Total: about 17:30.
 
-### YouTube chapters
+#### YouTube chapters
 
 The description lists the chapters with their start times, so viewers can
 jump to a step: Cold open, The problem, then Step 1 to Step 10, and Close.
 
-### The short cut
+## The short cut
 
-Chapter 0; the split screen from chapter 8; the two annotations and the
-delivered Secret from chapter 9; the pod rolling and Reloader's console from
-chapter 10; the `403` from chapter 11; and the end card. Narration rewritten
-to fit about 75 seconds, captions burned in.
+About 75 seconds, cut from the demo: the cold open, the Vault namespaces
+appearing, the two annotations, the pod rolling with Reloader's console, the
+`403`, and the end card. Captions burned in, because most people watch
+muted. Narration optional; if used, rewritten to fit.
+
+## Narration
+
+Each version has its own script. A shorter version needs its own sentences,
+not the long one cut down.
+
+| Version | Script | Recorded |
+|---|---|---|
+| Demo | The demo table above | One take per part |
+| Full walkthrough | The chapters table above | One take per chapter |
+| Short cut | Captions, from the demo's lines; voice optional | Only if used |
 
 ## Steps to make it
 
@@ -96,10 +136,10 @@ to fit about 75 seconds, captions burned in.
 | 4 | **Write the recording scripts.** One VHS tape per chapter's terminal part, from the tutorial's exact commands. One Playwright script per chapter's browser part, drawing the tutorial's highlights. One `record.sh` that runs them in tutorial order against the cluster. | Stakater | `video/tapes/`, `video/browser/`, `video/record.sh` |
 | 5 | **Dry run.** Run everything once without keeping the footage. Fix timing, waits and anything on screen that doesn't match the tutorial. Fixes to the steps go into the tutorial first. | Stakater | A run with no surprises |
 | 6 | **Reset and record.** Start from a clean cluster again, run `record.sh`, and keep the clips for each chapter. If a screen changed since the screenshots, re-capture them in the same run. | Stakater | `video/clips/NN-*.mp4` |
-| 7 | **Record the voiceover.** One take per chapter, from the final narration, in a quiet room. | One author | `video/voice/NN-*.wav` |
-| 8 | **Assemble.** An `assemble.sh` joins the clips in order, speeds up the waits with an on-screen "sped up" note, adds the chapter cards and "In production" captions, builds the split screen for chapter 8, lays the voiceover on top, adds the opening and end cards, and writes the subtitle file and the YouTube chapter list. Then cut the short version from the same clips. | Stakater | `walkthrough.mp4`, `short.mp4`, `walkthrough.srt`, a thumbnail |
-| 9 | **Review.** All three authors watch both cuts against the [video checklist](../../docs/guidelines/video.md#checklist). | The three authors | Approved, or a list of fixes |
-| 10 | **Publish.** YouTube on the tutorial's publication day; the short cut on LinkedIn; embedded in the posts if Red Hat Developer allows it. | Stakater, then everyone reposts | Live links, added to the tutorial |
+| 7 | **Record the voiceover.** Each version's script, as in the Narration table, in a quiet room. | One author | `video/voice/NN-*.wav` |
+| 8 | **Assemble.** An `assemble.sh` joins the clips in order, speeds up the waits with an on-screen "sped up" note, adds the chapter cards and "In production" captions, builds the split screen for chapter 8, lays the voiceover on top, adds the opening and end cards, and writes the subtitle file and the YouTube chapter list. That's the full walkthrough. Then cut the demo and the short cut from the same clips, each with its own narration. | Stakater | `walkthrough.mp4`, `demo.mp4`, `short.mp4`, a subtitle file for each, thumbnails |
+| 9 | **Review.** All three authors watch all three versions against the [video checklist](../../docs/guidelines/video.md#checklist). | The three authors | Approved, or a list of fixes |
+| 10 | **Publish.** YouTube on the tutorial's publication day: the demo and the full walkthrough. The short cut on LinkedIn. The demo embedded in the posts if Red Hat Developer allows it. | Stakater, then everyone reposts | Live links, added to the tutorial |
 
 The recording scripts and `assemble.sh` are committed with the video, so
 it can be re-recorded when the tutorial changes. The clips and voice files

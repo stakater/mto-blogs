@@ -34,7 +34,7 @@ that point to each other:
 |---|---|---|---|
 | **Explainer** | Why, and how does it work? | The people deciding | 1,500 to 2,000 words |
 | **Tutorial** | How do I build it, step by step? | The engineer trying it | As long as the steps need |
-| **Demo video** | Show me it working | Both, and people who don't read | A full walkthrough of the tutorial, plus a short cut |
+| **Demo video** | Show me it working | Both, and people who don't read | A 3 to 5 minute demo, cut from a full recorded walkthrough, plus a short cut for feeds |
 
 Each topic also has its example files, which readers run, in the topic's
 folder.
@@ -44,7 +44,7 @@ flowchart LR
     subgraph Topic
         E[Explainer<br/>why and how it works]
         T[Tutorial<br/>step by step]
-        V[Demo video<br/>walkthrough and short cut]
+        V[Demo video<br/>4-minute demo, full walkthrough,<br/>short cut]
         X[Example files]
     end
     E -->|"Want to build it?"| T
@@ -87,10 +87,10 @@ shows must already work, and be covered by the extension's tests.
 |---|---|---|
 | **Red Hat Developer** | Explainer and tutorial, co-authored | First |
 | **Stakater blog** | The same posts, with a canonical link to Red Hat Developer | After Red Hat publishes |
-| **YouTube (Stakater)** | The full video walkthrough, and the short cut | Same day as the tutorial |
+| **YouTube (Stakater)** | The demo, the full walkthrough, and the short cut | Same day as the tutorial |
 | **LinkedIn** | The short cut, with a link to the explainer | Same day, then reposted by the authors |
 | **IBM HashiCorp** | Their own version of the topic, linking to our tutorial | When they're ready |
-| **Sales and demos** | The video walkthrough, and the tutorial cluster as a live demo | Any time after publication |
+| **Sales and demos** | The demo video, and the tutorial cluster as a live demo | Any time after publication |
 
 A topic's explainer and tutorial can go out together or a week apart. The
 explainer always links to a tutorial that is already published, or
