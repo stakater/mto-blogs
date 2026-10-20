@@ -29,11 +29,16 @@ scenes follow the same rules. Start from the
 Until captured, a slot is a visible block, never an HTML comment:
 
 ```markdown
-> 📷 **Screenshot to capture:** <the tool, the page, and what's on it>
-> **Highlight:** <the elements to mark, named as they appear on screen>
+> 📷 **Screenshot to capture** (`NN-what-it-shows.png`): <the tool, the page, and what's on it>.
+> **Highlight:** <the elements to mark, named as they appear on screen>.
 ```
 
-Once captured, it becomes an image with alt text that says what's in it:
+The file name ties the slot to its row in the shot list, so the capture
+knows which image replaces which slot. The "what's on it" text becomes the
+image's alt text.
+
+Once captured, the whole block becomes an image, with alt text that says
+what's in it:
 
 ```markdown
 ![<the tool and page>: <what it shows>](screenshots/NN-what-it-shows.png)
@@ -117,6 +122,9 @@ await page.screenshot({ path: 'screenshots/08a-mto-console-tenants.png' });
 
 - **When a step, a highlight or the UI changes,** mark the row "Re-capture"
   and take it again in the next validation run.
+- **When many screenshots need re-taking,** put the slots back in the post
+  and remove the old images, so nobody mistakes an old image for a finished
+  one.
 - **All of a topic's screenshots come from one run,** so they show the same
   cluster, the same versions and the same names.
 - **The row records the version,** when it matters: "OpenShift 4.22".

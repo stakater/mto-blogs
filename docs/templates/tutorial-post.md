@@ -62,8 +62,8 @@ up to two tenants. That's exactly what this tutorial uses.
 [the expected output]
 ```
 
-> 📷 **Screenshot to capture:** [the tool, the page, and what's on it]
-> **Highlight:** [the elements to mark, named as they appear on screen]
+> 📷 **Screenshot to capture** (`NN-[what-it-shows].png`): [the tool, the page, and what's on it].
+> **Highlight:** [the elements to mark, named as they appear on screen].
 
 **What just happened:** [what each component did, when it isn't obvious.]
 
