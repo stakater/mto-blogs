@@ -133,8 +133,8 @@ not the long one cut down.
 |---|---|---|---|
 | 1 | **Agree the chapters and narration.** Read the narration aloud; cut anything that doesn't fit its time. | The three authors | This file, approved |
 | 2 | **Get a clean cluster.** OpenShift 4.22, the same as the tutorial's validation. Pass the kubeconfig, the console login and the Vault license by file path, never pasted. | Stakater | A cluster nobody else is using during the recording |
-| 3 | **Set up the recording tools.** VHS and ffmpeg for the terminal scenes; Playwright for the browser scenes, with video recording on. | Stakater | Tools installed and checked |
-| 4 | **Write the recording scripts.** One VHS tape per chapter's terminal part, from the tutorial's exact commands. One Playwright script per chapter's browser part, drawing the tutorial's highlights. One `record.sh` that runs them in tutorial order against the cluster. | Stakater | `video/tapes/`, `video/browser/`, `video/record.sh` |
+| 3 | **Set up the recording tools,** as in [recording.md](recording.md#setup). | Stakater | Tools installed and checked |
+| 4 | **Write the recording scripts,** following [recording.md](recording.md). One VHS tape per chapter's terminal part, from the tutorial's exact commands. One Playwright script per chapter's browser part, drawing the tutorial's highlights. One `record.sh` that runs them in tutorial order against the cluster. | Stakater | `video/tapes/`, `video/browser/`, `video/record.sh` |
 | 5 | **Dry run.** Run everything once without keeping the footage. Fix timing, waits and anything on screen that doesn't match the tutorial. Fixes to the steps go into the tutorial first. | Stakater | A run with no surprises |
 | 6 | **Reset and record.** Start from a clean cluster again, run `record.sh`, and keep the clips for each chapter. If a screen changed since the screenshots, re-capture them in the same run. | Stakater | `video/clips/NN-*.mp4` |
 | 7 | **Record the voiceover.** Each version's script, as in the Narration table, in a quiet room. | One author | `video/voice/NN-*.wav` |
