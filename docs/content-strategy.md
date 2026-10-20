@@ -1,8 +1,9 @@
 # Content strategy
 
 How this series is planned, made and published. The guidelines for each
-piece are in [guidelines/](guidelines/), and the rules every piece follows
-are in [CLAUDE.md](../CLAUDE.md).
+piece are in [guidelines/](guidelines/), every new piece starts from a
+[template](templates/), and the rules every piece follows are in
+[CLAUDE.md](../CLAUDE.md).
 
 ## Goals
 
@@ -111,7 +112,7 @@ flowchart LR
 |---|---|---|
 | **1. Story** | One paragraph: the reader, their problem, what they'll have at the end | The three authors agree on it |
 | **2. Explainer draft** | Written to the [explainer guideline](guidelines/explainer.md) | Every claim traces to the extension's tests or docs |
-| **3. Tutorial draft** | Written to the [tutorial guideline](guidelines/tutorial.md) | Every step has its command and expected output |
+| **3. Tutorial draft** | Written to the [tutorial guideline](guidelines/tutorial.md), with every screenshot planned as a slot and a shot-list row, per the [screenshot guideline](guidelines/screenshots.md) | Every step has its command and expected output; every screenshot names its highlight |
 | **4. Validation run** | One run of the tutorial on a clean cluster. The same run captures the screenshots and records the video footage | Every step passes as written; fixes go into the tutorial |
 | **5. Review** | A pull request; all three authors approve | Approved, with no open comments |
 | **6. Submit** | The Red Hat co-author submits the explainer and tutorial | Accepted, with a publication date |

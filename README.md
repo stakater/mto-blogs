@@ -53,7 +53,9 @@ would double it and mix two questions. Each post says so where it ends.
 - [Content strategy](docs/content-strategy.md): the goals, the topic unit
   (explainer, tutorial, demo video), channels, and how a topic is made
 - Guidelines: [explainer](docs/guidelines/explainer.md),
-  [tutorial](docs/guidelines/tutorial.md), [video](docs/guidelines/video.md)
+  [tutorial](docs/guidelines/tutorial.md),
+  [screenshots](docs/guidelines/screenshots.md), [video](docs/guidelines/video.md)
+- [Templates](docs/templates/): where every new piece starts
 - [CLAUDE.md](CLAUDE.md): the rules every piece follows
 
 ## Workflow
