@@ -18,7 +18,7 @@ narration.
 
 **They all leave the viewer knowing:** it installs on OpenShift in about an
 hour. A tenant becomes a Vault namespace on its own. Apps get secrets with
-two annotations, and rotations reach the pod. Tenants can't reach each
+a few annotations, and rotations reach the pod. Tenants can't reach each
 other. It runs on the free Basic edition.
 
 **In the recording:** steps 1 to 10, as written in the tutorial.
@@ -28,18 +28,19 @@ clean-up, which every version points to in the tutorial.
 ## The demo: the main cut
 
 About 4 minutes. The installs are one fast sequence; most of the time goes
-to what makes it worth trying.
+to what makes it worth trying. The narration is locked in its own
+[script](narration-demo.md), ready to record.
 
-| # | Part | From the recording | Narration (draft) | Time |
+| # | Part | From the recording | Narration | Time |
 |---|---|---|---|---|
-| 1 | **Cold open** | Vault's namespace picker with `acme` and `globex`; the Multi-Tenant Operator console's Tenants page | "Two teams on one OpenShift cluster, each with its own Vault namespace. Nobody wrote a line of Vault configuration." | 0:15 |
-| 2 | **The problem** | Title card; post 1's flow diagram | "OpenShift keeps teams apart. Vault has its own idea of who a team is. Multi-Tenant Operator connects them: define a team once, as a tenant, and Vault follows." | 0:25 |
-| 3 | **Setup** | Chapters 2 to 7 as one sequence, about 6 seconds per piece: each install, then its proof (Certified tile and "Succeeded"; `vault-0` ready; Vault Config Operator, External Secrets Operator and Reloader rolled out; the extension installed). Labeled "Setup, sped up". | "Setup is the Software Catalog and Helm, and the whole tutorial takes about an hour. Multi-Tenant Operator, free for two tenants. Vault Enterprise. Vault Config Operator, External Secrets Operator, Reloader. And the Vault extension for Multi-Tenant Operator." | 0:50 |
-| 4 | **Two tenants** | Chapter 8: the split screen as the Vault namespaces appear; the Multi-Tenant Operator console's Tenants and Namespaces pages | "Create two tenants. Multi-Tenant Operator creates their projects, and within a minute each has its own Vault namespace. We didn't touch Vault." | 0:45 |
-| 5 | **An app gets its secret** | Chapter 9: the two annotations, highlighted; "6 characters"; the policy nobody wrote; the delivered Secret | "An app asks for its secret with two annotations. No Vault token, no ticket. Here's the policy it was given, and nobody wrote it." | 0:40 |
-| 6 | **Rotation** | Chapter 10: the pod rolling; "10 characters"; Reloader's console with two restarts | "Rotate the password in Vault, and the running pod picks it up. Reloader's console keeps the record of what restarted, and why." | 0:30 |
-| 7 | **The boundary holds** | Chapter 11: both `403`s; the hand-widened policy put back | "The other team can't read acme's secret, or borrow its role: 403. And a policy widened by hand is back to normal a minute later." | 0:30 |
-| 8 | **Close** | End card: "Try it free", the tutorial link, the docs link, the Stakater logo | "Every step is in the tutorial, linked below. Try it free, on your own cluster." | 0:15 |
+| 1 | **Cold open** | Vault's namespace picker with `acme` and `globex`; the Multi-Tenant Operator console's Tenants page | [Script, part 1](narration-demo.md) | 0:15 |
+| 2 | **The problem** | Title card; post 1's flow diagram | [Script, part 2](narration-demo.md) | 0:25 |
+| 3 | **Setup** | Chapters 2 to 7 as one sequence, about 6 seconds per piece: each install, then its proof (Certified tile and "Succeeded"; `vault-0` ready; Vault Config Operator, External Secrets Operator and Reloader rolled out; the extension installed). Labeled "Setup, sped up". | [Script, part 3](narration-demo.md) | 0:50 |
+| 4 | **Two tenants** | Chapter 8: the split screen as the Vault namespaces appear; the Multi-Tenant Operator console's Tenants and Namespaces pages | [Script, part 4](narration-demo.md) | 0:45 |
+| 5 | **An app gets its secret** | Chapter 9: the annotations, highlighted; "6 characters"; the policy nobody wrote; the delivered Secret | [Script, part 5](narration-demo.md) | 0:40 |
+| 6 | **Rotation** | Chapter 10: the pod rolling; "10 characters"; Reloader's console with two restarts | [Script, part 6](narration-demo.md) | 0:30 |
+| 7 | **The boundary holds** | Chapter 11: both `403`s; the hand-widened policy put back | [Script, part 7](narration-demo.md) | 0:30 |
+| 8 | **Close** | End card: "Try it free", the tutorial link, the docs link, the Stakater logo | [Script, part 8](narration-demo.md) | 0:15 |
 
 Total: about 4:10.
 
@@ -96,7 +97,7 @@ Narration is a first draft, to be read aloud and tightened before recording.
 | 6 | **Step 5: Give Vault Config Operator its login** | The four Vault commands; the policy file, scrolled briefly | The login role written | "Vault Config Operator logs in once, with a narrow policy. It can create tenant namespaces and manage their access. It can't read a single secret, and it can't delete a tenant's data." | 0:50 |
 | 7 | **Step 6: Install the extension** | The Helm install | The extension's resources ready in `vault-config` | "The Vault Enterprise extension for Multi-Tenant Operator. From now on it watches every tenant. There are none yet, so Vault hasn't changed." | 0:40 |
 | 8 | **Step 7: Create two tenants** | `tenants.yaml` on screen; apply it | **Split screen:** Vault namespaces appear. Then: the Tenant tab; the project's tenant label; the Multi-Tenant Operator console's Tenants and Namespaces pages; `v namespace list`; Vault Config Operator's resources | "Now the part that matters. Two tenants: two small resources. Multi-Tenant Operator creates their projects and labels them. And within a minute, Vault has a namespace for each. We didn't touch Vault. Multi-Tenant Operator's own console shows both teams, and which projects are theirs. In Vault, each tenant has its own secrets engine and its own login. All of it is Kubernetes resources you can keep in Git." | 2:30 |
-| 9 | **Step 8: Deploy an app that reads its secret** | Write the password; `checkout.yaml` with its two annotations highlighted; apply it | The Secret appears; the log says "6 characters"; the secret in Vault; the policy nobody wrote; the Secret's owner in the OpenShift console | "An app asks for its secret with two annotations. That's it: no Vault token, no ticket. Here's the policy it was given, and nobody wrote it. And here's the password, delivered as an ordinary Kubernetes Secret." | 2:15 |
+| 9 | **Step 8: Deploy an app that reads its secret** | Write the password; `checkout.yaml` with its annotations highlighted; apply it | The Secret appears; the log says "6 characters"; the secret in Vault; the policy nobody wrote; the Secret's owner in the OpenShift console | "An app asks for its secret with annotations: two on its service account, one on its deployment. That's it: no Vault token, no ticket. Here's the policy it was given, and nobody wrote it. And here's the password, delivered as an ordinary Kubernetes Secret." | 2:15 |
 | 10 | **Step 9: Rotate the secret** | Rotate, force the refresh; then rotate again, sped up | The pod rolls; "10 characters", then "14 characters"; Reloader's console with two restarts caused by `checkout-db`; Vault's three versions | "Rotate the password in Vault. The Secret updates, Reloader rolls the pod, and the app has the new value. Do it again: same result, nothing new to set up. Reloader's console keeps the record: what restarted, and why." | 1:45 |
 | 11 | **Step 10: Check the isolation** | globex's app logs in; reads its own secret; tries acme's; tries acme's role; a policy widened by hand, then the wait, sped up | The allowed read; both refusals, `403` highlighted; the policy back to what it was | "Now prove the boundary holds. The other team's app reads its own secret. It can't read acme's: 403. It can't borrow acme's role: 403. And if someone widens a policy by hand during an incident, a minute later it's back to what it should be." | 1:45 |
 | 12 | **Close** | – | "What you built", four lines; then the end card: "Try it free", the tutorial link, the docs link, the Stakater logo | "Two tenants, each with its own Vault namespace. Secrets by annotation, rotations that reach the pod, and a boundary that holds. The tutorial, with every command and the clean-up, is linked below. Try it free, on your own cluster." | 0:40 |
@@ -111,7 +112,7 @@ jump to a step: Cold open, The problem, then Step 1 to Step 10, and Close.
 ## The short cut
 
 About 75 seconds, cut from the demo: the cold open, the Vault namespaces
-appearing, the two annotations, the pod rolling with Reloader's console, the
+appearing, the annotations, the pod rolling with Reloader's console, the
 `403`, and the end card. Captions burned in, because most people watch
 muted. Narration optional; if used, rewritten to fit.
 
@@ -122,7 +123,7 @@ not the long one cut down.
 
 | Version | Script | Recorded |
 |---|---|---|
-| Demo | The demo table above | One take per part |
+| Demo | [narration-demo.md](narration-demo.md), ready to read aloud and record | One file per part, two takes each |
 | Full walkthrough | The chapters table above | One take per chapter |
 | Short cut | Captions, from the demo's lines; voice optional | Only if used |
 
