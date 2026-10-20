@@ -1,13 +1,14 @@
 # Screenshots
 
 Captured during the validation run on a real OpenShift 4.22 cluster, at
-1440×900, so each one matches exactly what the tutorial's steps do. Each file
+1440×900 and 2×, so each one matches exactly what the tutorial's steps do. Each file
 is embedded at its step in [post.md](../post.md).
 
 **Highlight** is what the capture marks on the screen, following the
-[tutorial guideline](../../docs/guidelines/tutorial.md#highlights): an
+[tutorial guideline](../../docs/guidelines/screenshots.md#highlights): an
 outline drawn around those elements in the page before the screenshot is
-taken. Rows marked **re-capture** were taken before highlights existed.
+taken. Rows marked **re-capture** were taken before highlights and the 2× setting
+existed.
 
 | File | Step | Shows | Highlight | Status |
 |---|---|---|---|---|
