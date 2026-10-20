@@ -59,12 +59,14 @@ versions, **Operators → OperatorHub**) and search for **multi tenant**. The
 tile is named **Multi Tenant Operator**, without the hyphen, so a search for
 "multi-tenant" doesn't find it.
 
-![Software Catalog search for "multi tenant": the Multi Tenant Operator tile by Stakater, with the Certified badge](screenshots/01-operatorhub-mto.png)
+> 📷 **Screenshot to capture** (`01-operatorhub-mto.png`): Software Catalog search for "multi tenant": the Multi Tenant Operator tile by Stakater, with the Certified badge.
+> **Highlight:** the Multi Tenant Operator tile.
 
 Click **Install** and keep the defaults. The operator installs into the
 `multi-tenant-operator` namespace.
 
-![Installed Operators in multi-tenant-operator: Multi Tenant Operator and the operators it brings, all Succeeded](screenshots/02-installed-mto.png)
+> 📷 **Screenshot to capture** (`02-installed-mto.png`): Installed Operators in multi-tenant-operator: Multi Tenant Operator and the operators it brings, all Succeeded.
+> **Highlight:** the Multi Tenant Operator row and its "Succeeded" status.
 
 Multi-Tenant Operator brings three companions with it: Template Operator,
 Hibernation Operator and MTO Dependencies Operator.
@@ -201,7 +203,8 @@ Two settings matter here:
 In **Ecosystem → Software Catalog**, install **External Secrets Operator for
 Red Hat OpenShift** with the defaults.
 
-![Software Catalog search for "external secrets": the External Secrets Operator for Red Hat OpenShift tile](screenshots/03-operatorhub-eso.png)
+> 📷 **Screenshot to capture** (`03-operatorhub-eso.png`): Software Catalog search for "external secrets": the External Secrets Operator for Red Hat OpenShift tile.
+> **Highlight:** the External Secrets Operator for Red Hat OpenShift tile.
 
 Then tell it to deploy External Secrets Operator. The operator isolates its
 pods with deny-all network policies, so also let the controller reach Vault:
@@ -350,12 +353,14 @@ oc apply -f tenants.yaml
 Multi-Tenant Operator creates the projects `acme-shop` and `globex-web`, and
 labels each with its tenant.
 
-![Project acme-shop, Details tab: among its labels, stakater.com/tenant=acme](screenshots/07-project-tenant-label.png)
+> 📷 **Screenshot to capture** (`07-project-tenant-label.png`): Project acme-shop, Details tab: among its labels, stakater.com/tenant=acme.
+> **Highlight:** the label `stakater.com/tenant=acme`.
 
 In the console, open **Ecosystem → Installed Operators → Multi Tenant
 Operator** and the **Tenant** tab:
 
-![Multi Tenant Operator's Tenant tab: acme and globex, both Ready](screenshots/04-mto-tenants.png)
+> 📷 **Screenshot to capture** (`04-mto-tenants.png`): Multi Tenant Operator's Tenant tab: acme and globex, both Ready.
+> **Highlight:** the rows `acme` and `globex`.
 
 Multi-Tenant Operator also has its own console, which shows each tenant
 with its projects, quota and costs. Switch it on, and let its built-in
@@ -381,13 +386,13 @@ describe [removing the default login](https://docs.stakater.com/mto/latest/getti
 
 The **Tenants** page lists both teams:
 
-> 📷 **Screenshot to capture:** the Multi-Tenant Operator console,
+> 📷 **Screenshot to capture** (`08a-mto-console-tenants.png`): the Multi-Tenant Operator console,
 > **Tenants** page, listing `acme` and `globex`.
 > **Highlight:** the rows `acme` and `globex`.
 
 The **Namespaces** page shows which projects belong to which tenant:
 
-> 📷 **Screenshot to capture:** the Multi-Tenant Operator console,
+> 📷 **Screenshot to capture** (`08b-mto-console-namespaces.png`): the Multi-Tenant Operator console,
 > **Namespaces** page, listing `acme-shop` under tenant `acme` and
 > `globex-web` under tenant `globex`.
 > **Highlight:** the rows `acme-shop` and `globex-web`, with their tenant.
@@ -421,7 +426,8 @@ Open the Vault UI at the route from step 2 and sign in with the token
 echo "https://$(oc -n vault get route vault-ui -o jsonpath='{.spec.host}')"
 ```
 
-![The Vault UI namespace picker, listing root, acme, globex and shared](screenshots/05-vault-namespaces.png)
+> 📷 **Screenshot to capture** (`05-vault-namespaces.png`): The Vault UI namespace picker, listing root, acme, globex and shared.
+> **Highlight:** the entries `acme` and `globex`.
 
 **What just happened:** you created two Kubernetes resources and didn't
 touch Vault. Multi-Tenant Operator labeled the projects. Template Operator
@@ -438,7 +444,8 @@ oc -n vault-config get namespaces.redhatcop.redhat.io,secretenginemounts.redhatc
 In the console, the same resources are under **Home → Search**, project
 `vault-config`, resource **Namespace** (`redhatcop.redhat.io`):
 
-![Search in project vault-config: the Vault Config Operator Namespace resources acme, globex and shared](screenshots/09-vco-resources.png)
+> 📷 **Screenshot to capture** (`09-vco-resources.png`): Search in project vault-config: the Vault Config Operator Namespace resources acme, globex and shared.
+> **Highlight:** the resources `acme` and `globex`.
 
 ## Step 8: Deploy an app that reads its secret
 
@@ -484,17 +491,20 @@ db password has 6 characters
 
 The app prints the length of the password, not the password.
 
-![The Vault UI in namespace acme: the secret dev/acme-shop/checkout/db, with the key password](screenshots/06-vault-checkout-secret.png)
+> 📷 **Screenshot to capture** (`06-vault-checkout-secret.png`): The Vault UI in namespace acme: the secret dev/acme-shop/checkout/db, with the key password.
+> **Highlight:** the secret's path and the key `password`.
 
 In the same Vault namespace, open **Access control → ACL policies**. The
 app's policy is there, and nobody wrote it:
 
-![The Vault UI in namespace acme: the ACL policy kv.acme.acme-shop.checkout, granting the app's own path and its project's _shared area](screenshots/10-vault-acme-policy.png)
+> 📷 **Screenshot to capture** (`10-vault-acme-policy.png`): The Vault UI in namespace acme: the ACL policy kv.acme.acme-shop.checkout, granting the app's own path and its project's _shared area.
+> **Highlight:** the rule granting `dev/acme-shop/checkout/`.
 
 On the cluster, the password arrived as an ordinary Secret, owned by the
 `ExternalSecret` that keeps it in step with Vault:
 
-![Secret checkout-db in project acme-shop: owner ExternalSecret checkout-db, and the key password with its value hidden](screenshots/11-openshift-secret-checkout-db.png)
+> 📷 **Screenshot to capture** (`11-openshift-secret-checkout-db.png`): Secret checkout-db in project acme-shop: owner ExternalSecret checkout-db, and the key password with its value hidden.
+> **Highlight:** the owner `ExternalSecret checkout-db`.
 
 **What just happened:** the extension gave `checkout` a Vault policy and a
 login role in tenant `acme`'s Vault namespace, limited to its own path.
@@ -536,14 +546,15 @@ Reloader's console, at the address from step 4, shows the reload. Open
 the application `checkout` in `acme-shop`: it was restarted, because the
 Secret `checkout-db` changed.
 
-> 📷 **Screenshot to capture:** Reloader's console, the application
+> 📷 **Screenshot to capture** (`13-reloader-console.png`): Reloader's console, the application
 > `checkout` in namespace `acme-shop`, showing its restart and the Secret
 > `checkout-db` that caused it.
 > **Highlight:** the restart entry, and the Secret `checkout-db` as its cause.
 
 In the Vault UI, the secret now has two versions:
 
-![The Vault UI in namespace acme: Version History of dev/acme-shop/checkout/db, with versions 1 and 2](screenshots/12-vault-secret-versions.png)
+> 📷 **Screenshot to capture** (`12-vault-secret-versions.png`): The Vault UI in namespace acme: Version History of dev/acme-shop/checkout/db, with versions 1 and 2.
+> **Highlight:** versions 1 and 2.
 
 ## Step 10: Check the isolation
 
