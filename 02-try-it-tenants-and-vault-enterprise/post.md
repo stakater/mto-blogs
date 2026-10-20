@@ -3,8 +3,9 @@
 <!--
 Outlet: Red Hat Developer (tutorial), then the Stakater blog, canonical link back.
 Companion to post 1, "One tenant, from OpenShift to Vault Enterprise", which explains why.
-Screenshots: each "Screenshot to capture" line is a slot, filled during the validation run;
-the file names are listed in screenshots/README.md.
+Screenshots: each "Screenshot to capture" line is a slot, filled during the validation run.
+Its "Highlight" line says what the capture marks. The full list, with highlights, is in
+screenshots/README.md.
 -->
 
 In [One tenant, from OpenShift to Vault Enterprise](../01-tenants-and-vault-enterprise/post.md),
@@ -378,8 +379,18 @@ It has a well-known password and sees every tenant. The fourth post in this
 series connects an identity provider, and the Multi-Tenant Operator docs
 describe [removing the default login](https://docs.stakater.com/mto/latest/getting-started/production-readiness.html).
 
-> 📷 **Screenshot to capture:** the Multi-Tenant Operator console, tenant
-> `acme`, showing its project `acme-shop` and its quota `small`.
+The **Tenants** page lists both teams:
+
+> 📷 **Screenshot to capture:** the Multi-Tenant Operator console,
+> **Tenants** page, listing `acme` and `globex`.
+> **Highlight:** the rows `acme` and `globex`.
+
+The **Namespaces** page shows which projects belong to which tenant:
+
+> 📷 **Screenshot to capture:** the Multi-Tenant Operator console,
+> **Namespaces** page, listing `acme-shop` under tenant `acme` and
+> `globex-web` under tenant `globex`.
+> **Highlight:** the rows `acme-shop` and `globex-web`, with their tenant.
 
 Within a minute, each tenant has its own Vault namespace:
 
@@ -521,12 +532,14 @@ db password has 10 characters
 **What just happened:** the Secret changed, so Reloader rolled the pod, and
 the new pod started with the new password.
 
-Reloader's console, at the address from step 4, shows the reload: the
-Deployment `checkout` in `acme-shop`, restarted because the Secret
-`checkout-db` changed.
+Reloader's console, at the address from step 4, shows the reload. Open
+the application `checkout` in `acme-shop`: it was restarted, because the
+Secret `checkout-db` changed.
 
-> 📷 **Screenshot to capture:** Reloader's console, showing the reload of
-> Deployment `checkout` in `acme-shop`, caused by Secret `checkout-db`.
+> 📷 **Screenshot to capture:** Reloader's console, the application
+> `checkout` in namespace `acme-shop`, showing its restart and the Secret
+> `checkout-db` that caused it.
+> **Highlight:** the restart entry, and the Secret `checkout-db` as its cause.
 
 In the Vault UI, the secret now has two versions:
 
