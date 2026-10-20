@@ -11,10 +11,15 @@ adds what is specific to video.
 
 | Cut | Length | For | Where |
 |---|---|---|---|
-| **Walkthrough** | 8 to 12 minutes | The engineer who wants to see every step before trying it | YouTube, embedded in the tutorial where allowed, sales demos |
+| **Walkthrough** | The whole tutorial, installs included: usually 15 to 20 minutes, a chapter per step | The engineer who wants to see every step before trying it | YouTube, embedded in the tutorial where allowed, sales demos |
 | **Short cut** | 60 to 90 seconds | Everyone else: the moments that land | LinkedIn, YouTube Shorts, the explainer |
 
-The walkthrough follows the tutorial step by step, with a chapter per step.
+The walkthrough follows the tutorial step by step, with a chapter per step,
+installs included, so the viewer sees that it all installs and works. Every
+chapter has the same rhythm: a card, why, do it, the wait (sped up and
+labeled), show it running, what happened, then a one-second beat. The first
+video's [plan](../../02-try-it-tenants-and-vault-enterprise/video/plan.md#how-every-chapter-runs)
+is the worked example.
 The short cut keeps only the moments where something visibly changes, such
 as a Vault namespace appearing, a pod rolling, or a 403.
 
@@ -24,7 +29,7 @@ as a Vault namespace appearing, a pod rolling, or a 403.
 |---|---|---|
 | **Cold open** | 10 to 15 s | The end result first: two tenants, each with its own Vault namespace |
 | **The problem** | 20 to 30 s | The gap the topic closes, in one sentence and one picture, often a diagram from the explainer |
-| **Setup** | 1 to 2 min | Installing the pieces, sped up. Narration says what each piece is for, not every flag. |
+| **Setup** | Several chapters | Installing each piece, one chapter per tutorial step, with its waits sped up and each install shown running. Narration says what each piece is for, not every flag. |
 | **The steps** | Most of the video | One chapter per tutorial step that changes something the viewer can see |
 | **The proof** | 1 to 2 min | Isolation, refusals, drift put back: the guardrails, live |
 | **Close** | 15 to 20 s | What you saw, the tutorial link, and the free Basic edition |

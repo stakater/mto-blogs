@@ -6,22 +6,39 @@
 The demo video, recorded from a real run of the [tutorial](../post.md). It
 follows the [video guideline](../../docs/guidelines/video.md).
 
+## What we want
+
+**The whole tutorial, on screen.** [What the viewer sees happen, from start
+to finish.]
+
 | | |
 |---|---|
-| **Walkthrough** | About [N] minutes, a chapter per tutorial step |
+| **Walkthrough** | About [N] minutes, one YouTube chapter per tutorial step |
 | **Short cut** | About [N] seconds, from the same footage |
 | **Viewer** | [who, and what they're deciding] |
 | **They come away knowing** | [the three or four things they should remember] |
 
-## Shot list and narration
+**In:** [the tutorial steps covered]. **Out:** [anything left out, and why].
 
-| # | Tutorial step | Type | On screen | Narration (draft) | Time |
+## How every chapter runs
+
+Use the rhythm from the [first video plan](../../02-try-it-tenants-and-vault-enterprise/video/plan.md#how-every-chapter-runs):
+card, why, do, wait (sped up and labeled), show it running, what happened,
+"In production" caption where the tutorial has one, beat.
+
+## On screen
+
+[Terminal and browser settings as in the first video plan, plus anything
+special to this topic, such as a split screen at the key moment.]
+
+## Chapters
+
+| # | Chapter | Do | Show it running | Narration (draft) | Time |
 |---|---|---|---|---|---|
-| 1 | – | Browser | Cold open: [the end result] | "[one or two sentences]" | 0:15 |
-| 2 | – | Card | Title: "[title]" | – | 0:04 |
-| 3 | – | Diagram | [the problem, from the explainer] | "[the gap, in one breath]" | 0:25 |
-| 4 | [step] | [Terminal / Browser] | [what's on screen; highlights as in the shot list] | "[narration]" | [time] |
-| N | – | Card | "What you saw", then the end card: "Try it free", tutorial and docs links, Stakater logo | "[close]" | 0:25 |
+| 0 | **Cold open** | – | [the end result] | "[one or two sentences]" | 0:20 |
+| 1 | **The problem** | – | Title card; [the explainer's diagram] | "[the gap, in one breath]" | 0:40 |
+| 2 | **Step 1: [heading]** | [the commands or clicks] | [the proof it worked, with the tutorial's highlights] | "[narration]" | [time] |
+| N | **Close** | – | "What you built"; the end card: "Try it free", tutorial and docs links, Stakater logo | "[close]" | 0:40 |
 
 ### The short cut
 
