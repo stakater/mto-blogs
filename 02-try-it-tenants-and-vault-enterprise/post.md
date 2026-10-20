@@ -538,15 +538,34 @@ db password has 10 characters
 **What just happened:** the Secret changed, so Reloader rolled the pod, and
 the new pod started with the new password.
 
-Reloader's console, at the address from step 4, shows the reload. Open
-the application `checkout` in `acme-shop`: it was restarted, because the
-Secret `checkout-db` changed.
+Rotation should be routine, not an event. Do it once more:
 
-![Reloader's console, the application checkout in namespace acme-shop, showing its restart and the Secret checkout-db that caused it](screenshots/13-reloader-console.png)
+```bash
+v kv put -namespace=acme -mount=kv dev/acme-shop/checkout/db password=an0th3r-s3cr3t
+oc -n acme-shop annotate externalsecret checkout-db force-sync="$(date +%s)" --overwrite
+sleep 15
+oc -n acme-shop rollout status deploy/checkout
+oc -n acme-shop logs deploy/checkout
+```
 
-In the Vault UI, the secret now has two versions:
+```
+db password has 14 characters
+```
 
-![The Vault UI in namespace acme: Version History of dev/acme-shop/checkout/db, with versions 1 and 2](screenshots/12-vault-secret-versions.png)
+Same result, with nothing new to set up. Every rotation in Vault reaches the
+running pod the same way.
+
+Reloader's console, at the address from step 4, keeps the history. Open the
+application `checkout` in `acme-shop`: its event log shows both restarts,
+each caused by the Secret `checkout-db`.
+
+> 📷 **Screenshot to capture** (`13-reloader-console.png`): Reloader's console, the application `checkout` in namespace `acme-shop`: the Secret `checkout-db` it depends on, and an event log with two restarts.
+> **Highlight:** the Secret `checkout-db`, and the two rows of the event log.
+
+In the Vault UI, the secret now has three versions:
+
+> 📷 **Screenshot to capture** (`12-vault-secret-versions.png`): The Vault UI in namespace acme: Version History of dev/acme-shop/checkout/db, with versions 1, 2 and 3.
+> **Highlight:** versions 1, 2 and 3.
 
 ## Step 10: Check the isolation
 

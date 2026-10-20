@@ -13,6 +13,9 @@ All fourteen were captured in one run on 2026-10-20, on OpenShift 4.22 with
 Multi-Tenant Operator 1.10.1, Vault Enterprise 2.1.1 and Reloader v2
 (chart 3.0.0-beta.2), at 2880×1800.
 
+12 and 13 are to re-capture: step 9 now rotates the password twice, so Vault
+shows three versions and Reloader's console two restarts.
+
 | File | Step | Shows | Highlight | Status |
 |---|---|---|---|---|
 | `01-operatorhub-mto.png` | 1 | Software Catalog search for "multi tenant": the Multi Tenant Operator tile with the "Certified" badge | The Multi Tenant Operator tile | Captured |
@@ -27,8 +30,8 @@ Multi-Tenant Operator 1.10.1, Vault Enterprise 2.1.1 and Reloader v2
 | `09-vco-resources.png` | 7 | OpenShift console, Home → Search: Vault Config Operator `Namespace` resources in `vault-config` | The resources `acme` and `globex` | Captured |
 | `10-vault-acme-policy.png` | 8 | Vault UI, namespace `acme`, ACL policies: `kv.acme.acme-shop.checkout` and its rules | The rule granting `dev/acme-shop/checkout/` | Captured |
 | `11-openshift-secret-checkout-db.png` | 8 | OpenShift console, Secret `checkout-db`: key `password`, owner ExternalSecret | The owner `ExternalSecret checkout-db` | Captured |
-| `12-vault-secret-versions.png` | 9 | Vault UI, secret `db`, Version History: versions 1 and 2 | Versions 1 and 2 | Captured |
-| `13-reloader-console.png` | 9 | Reloader's console: the application `checkout` in `acme-shop`, its restart, and the Secret `checkout-db` that caused it | The restart entry, and the Secret `checkout-db` as its cause | Captured |
+| `12-vault-secret-versions.png` | 9 | Vault UI, secret `db`, Version History: versions 1, 2 and 3 | Versions 1, 2 and 3 | Re-capture |
+| `13-reloader-console.png` | 9 | Reloader's console: the application `checkout` in `acme-shop`, the Secret `checkout-db`, and an event log with two restarts | The Secret `checkout-db`, and the two rows of the event log | Re-capture |
 
 08a, 08b and 13 are required: they are the only screenshots of Multi-Tenant
 Operator's and Reloader's own consoles.
