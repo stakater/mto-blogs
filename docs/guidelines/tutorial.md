@@ -62,10 +62,38 @@ adds what is specific to a tutorial.
 - Named `NN-what-it-shows.png`, and listed in `screenshots/README.md` with
   the step and what it shows.
 - Each has alt text that says what's in it.
-- Until captured, a slot is a visible line:
-  `> 📷 **Screenshot to capture:** <what it shows>`.
+- Until captured, a slot is a visible block in the post:
+
+  ```markdown
+  > 📷 **Screenshot to capture:** <what it shows>
+  > **Highlight:** <what to mark>
+  ```
+
 - Best value: the screens that show Multi-Tenant Operator's work, such as a
   tenant label, the Multi-Tenant Operator console, or a policy nobody wrote.
+- When a step uses a Stakater product's own console (Multi-Tenant Operator,
+  Reloader), its screenshot is required, not optional.
+
+### Highlights
+
+Most screenshots point at one or two things on a busy screen. The
+highlight tells the reader where to look.
+
+- **Every screenshot names its highlight,** in the slot's `Highlight:` line
+  and in the Highlight column of `screenshots/README.md`. If nothing needs
+  marking, write "None".
+- **Name the element by what's on screen,** such as "the row `acme`" or "the
+  label `stakater.com/tenant=acme`", so the capture can find it.
+- **The capture draws it, in the page,** before taking the screenshot: an
+  outline around the element, 3 px, Stakater orange `#EA7845`, 4 px from the
+  element, with rounded corners. Nothing is drawn afterwards in an image
+  editor, so a re-capture gives the same result.
+- **At most three highlights per screenshot,** and no arrows, labels or
+  blurring. If a screen needs more, it's two screenshots.
+- **The highlighted element is in view,** not scrolled off or hidden behind a
+  menu.
+- **When the highlight changes, re-capture.** Mark the row "Re-capture" in
+  `screenshots/README.md` until it's done.
 
 ## Checklist
 
@@ -73,6 +101,7 @@ adds what is specific to a tutorial.
 - [ ] Every step has its command and its expected output.
 - [ ] "What just happened" wherever the result isn't obvious.
 - [ ] Every learning shortcut has its "In production" note.
-- [ ] Every screenshot slot is filled, and listed in `screenshots/README.md`.
+- [ ] Every screenshot slot is filled, listed in `screenshots/README.md`,
+  and captured with its highlight.
 - [ ] Clean up returns the cluster to where the tutorial started.
 - [ ] Links back to the explainer; ends with "About Multi-Tenant Operator".

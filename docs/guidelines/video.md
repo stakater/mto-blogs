@@ -41,6 +41,8 @@ as a Vault namespace appearing, a pod rolling, or a 403.
   points at that resolution, and browser zoom so text is legible on a
   phone.
 - **Only what the tutorial shows.** No extra steps, no hidden fixes.
+- **Browser scenes use the tutorial's highlights,** in the same style, drawn
+  in the page as the scene reaches that element.
 - **No secrets on screen.** Licenses, tokens and client secrets never appear;
   the commands read them into Secrets without printing them.
 - **Long waits are cut or sped up,** with an on-screen note such as "sped up
