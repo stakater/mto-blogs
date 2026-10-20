@@ -45,7 +45,7 @@ Here's what you'll install:
 | Vault Enterprise | 2.1.1 | HashiCorp Helm chart, Red Hat certified image | Holds the secrets |
 | Vault Config Operator | v1.0.3 or later | Red Hat Community of Practice Helm chart | Writes Vault configuration from Kubernetes resources |
 | External Secrets Operator | current | Software Catalog (OperatorHub) | Copies secrets from Vault into Kubernetes Secrets |
-| Reloader | current | Stakater Helm chart | Rolls pods when their Secret changes |
+| Reloader, with its console | chart 3.0.0-beta.2 (Reloader v2) | Stakater Helm chart | Rolls pods when their Secret changes, and shows each reload in a free console for up to 3 namespaces |
 | Vault Enterprise extension | current | `oci://ghcr.io/stakater/charts` | Turns each tenant into Vault configuration |
 
 The Multi-Tenant Operator Basic edition is free with no expiry, and manages
@@ -106,7 +106,8 @@ oc -n multi-tenant-operator patch integrationconfig tenant-operator-config --typ
   {"op":"add","path":"/spec/accessControl/privileged/namespaces/-","value":"^vault-config-operator$"},
   {"op":"add","path":"/spec/accessControl/privileged/namespaces/-","value":"^external-secrets$"},
   {"op":"add","path":"/spec/accessControl/privileged/namespaces/-","value":"^external-secrets-operator$"},
-  {"op":"add","path":"/spec/accessControl/privileged/namespaces/-","value":"^reloader$"}
+  {"op":"add","path":"/spec/accessControl/privileged/namespaces/-","value":"^reloader$"},
+  {"op":"add","path":"/spec/accessControl/privileged/namespaces/-","value":"^reloader-enterprise-system$"}
 ]'
 ```
 
@@ -233,20 +234,42 @@ Wait for the webhook, not only for the `ExternalSecret` CRD. The operator
 installs the CRD before External Secrets Operator itself runs, and it
 reports `Ready` before the pods start.
 
-Install Reloader:
+Install Reloader, with its console. The console shows every reload: which
+workload restarted, and which Secret or ConfigMap caused it. Its free tier
+needs no license and watches up to three namespaces, so give it the two
+projects this tutorial creates in step 7:
 
 ```bash
+APPS_DOMAIN=$(oc get ingresses.config cluster -o jsonpath='{.spec.domain}')
+
 helm repo add stakater https://stakater.github.io/stakater-charts
-helm upgrade --install reloader stakater/reloader -n reloader --create-namespace \
+helm upgrade --install reloader stakater/reloader --version 3.0.0-beta.2 \
+  -n reloader --create-namespace \
   --set reloader.isOpenshift=true \
-  --set reloader.deployment.securityContext.runAsUser=null
+  --set reloader.deployment.securityContext.runAsUser=null \
+  --set enterprise.enabled=true \
+  --set global.host="reloader.$APPS_DOMAIN" \
+  --set 'enterprise.gateway.namespaces=acme-shop\,globex-web' \
+  --set 'enterprise.console.ingress.annotations.route\.openshift\.io/termination=edge' \
+  --set 'enterprise.gateway.ingress.annotations.route\.openshift\.io/termination=edge'
 
 oc -n reloader rollout status deploy/reloader-reloader --timeout=300s
+oc -n reloader rollout status deploy/reloader-enterprise-gateway --timeout=300s
+oc -n reloader rollout status deploy/reloader-enterprise-console --timeout=300s
+echo "https://reloader.$APPS_DOMAIN"
 ```
 
-The chart pins the user ID `65534` by default, which OpenShift's
-`restricted-v2` security context constraint refuses. Setting it to `null`
-lets OpenShift assign one from the project's range.
+- **`runAsUser=null`:** the chart pins Reloader's user ID to `65534`, which
+  OpenShift's `restricted-v2` security context constraint refuses. Setting
+  it to `null` lets OpenShift assign one from the project's range.
+- **`global.host`:** the console and its gateway share one address. OpenShift
+  turns their Ingresses into routes, with TLS at the router.
+- **`enterprise.gateway.namespaces`:** the namespaces the free console
+  watches. They don't need to exist yet.
+
+**In production,** the console has no sign-in of its own, so anyone who can
+reach its address can see your reload history. Keep the route internal, or
+put it behind your cluster's authentication.
 
 ## Step 5: Give Vault Config Operator its login to Vault
 
@@ -497,6 +520,13 @@ db password has 10 characters
 
 **What just happened:** the Secret changed, so Reloader rolled the pod, and
 the new pod started with the new password.
+
+Reloader's console, at the address from step 4, shows the reload: the
+Deployment `checkout` in `acme-shop`, restarted because the Secret
+`checkout-db` changed.
+
+> 📷 **Screenshot to capture:** Reloader's console, showing the reload of
+> Deployment `checkout` in `acme-shop`, caused by Secret `checkout-db`.
 
 In the Vault UI, the secret now has two versions:
 

@@ -18,6 +18,7 @@ is embedded at its step in [post.md](../post.md).
 | `10-vault-acme-policy.png` | 8 | Vault UI, namespace `acme`, ACL policies: `kv.acme.acme-shop.checkout` and its rules |
 | `11-openshift-secret-checkout-db.png` | 8 | OpenShift console, Secret `checkout-db`: key `password`, owner ExternalSecret |
 | `12-vault-secret-versions.png` | 9 | Vault UI, secret `db`, Version History: versions 1 and 2 |
+| `13-reloader-console.png` | 9 | Reloader's console: Deployment `checkout` in `acme-shop` reloaded because Secret `checkout-db` changed |
 
-Row 08 is still to capture: it has a "Screenshot to capture" slot in the
-post.
+Rows 08 and 13 are still to capture: each has a "Screenshot to capture"
+slot in the post.
