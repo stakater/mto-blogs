@@ -48,10 +48,13 @@ and 4 are about people signing in, which needs an identity provider with
 groups and a change to the OpenShift login. Putting both in one tutorial
 would double it and mix two questions. Each post says so where it ends.
 
-## Writing rules
+## Strategy and guidelines
 
-The full rules are in [CLAUDE.md](CLAUDE.md): what every post must do, the
-facts to get right, and the style.
+- [Content strategy](docs/content-strategy.md): the goals, the topic unit
+  (explainer, tutorial, demo video), channels, and how a topic is made
+- Guidelines: [explainer](docs/guidelines/explainer.md),
+  [tutorial](docs/guidelines/tutorial.md), [video](docs/guidelines/video.md)
+- [CLAUDE.md](CLAUDE.md): the rules every piece follows
 
 ## Workflow
 

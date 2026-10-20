@@ -15,6 +15,11 @@ Multi-Tenant Operator is Stakater's product, and the posts are open about
 it. The reader should always know what it is, what it did in the story, and
 how to get it.
 
+The plan for the whole series is in [docs/content-strategy.md](docs/content-strategy.md),
+and each kind of piece has a guideline in [docs/guidelines/](docs/guidelines/):
+explainer, tutorial, video. Follow the guideline for the piece you're working
+on, and tick its checklist before review.
+
 ## What every post must do
 
 - **Make Multi-Tenant Operator central to the story.** The reader should

@@ -3,3 +3,8 @@ Thumbs.db
 *.swp
 .idea/
 .vscode/
+
+# Raw video footage and voice takes: large, kept with the published video
+*/video/clips/
+*/video/voice/
+*/video/out/
