@@ -46,7 +46,7 @@ Here's what you'll install:
 | Vault Enterprise | 2.1.1 | HashiCorp Helm chart, Red Hat certified image | Holds the secrets |
 | Vault Config Operator | v1.0.3 or later | Red Hat Community of Practice Helm chart | Writes Vault configuration from Kubernetes resources |
 | External Secrets Operator | current | Software Catalog (OperatorHub) | Copies secrets from Vault into Kubernetes Secrets |
-| Reloader, with its console | chart 3.0.0-beta.2 (Reloader v2) | Stakater Helm chart | Rolls pods when their Secret changes, and shows each reload in a free console for up to 3 namespaces |
+| Reloader, with its console | chart 3.0.0-beta.3 (Reloader v2) | Stakater Helm chart | Rolls pods when their Secret changes, and shows each reload in a free console for up to 3 namespaces |
 | Vault Enterprise extension | current | `oci://ghcr.io/stakater/public/charts` | Turns each tenant into Vault configuration |
 
 The Multi-Tenant Operator Basic edition is free with no expiry, and manages
@@ -245,7 +245,7 @@ projects this tutorial creates in step 7:
 APPS_DOMAIN=$(oc get ingresses.config cluster -o jsonpath='{.spec.domain}')
 
 helm repo add stakater https://stakater.github.io/stakater-charts
-helm upgrade --install reloader stakater/reloader --version 3.0.0-beta.2 \
+helm upgrade --install reloader stakater/reloader --version 3.0.0-beta.3 \
   -n reloader --create-namespace \
   --set reloader.isOpenshift=true \
   --set reloader.deployment.securityContext.runAsUser=null \

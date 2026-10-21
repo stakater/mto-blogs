@@ -13,8 +13,10 @@ All fourteen were captured in one run on 2026-10-20, on OpenShift 4.22 with
 Multi-Tenant Operator 1.10.1, Vault Enterprise 2.1.1 and Reloader v2
 (chart 3.0.0-beta.2), at 2880×1800.
 
-12 and 13 are to re-capture: step 9 now rotates the password twice, so Vault
-shows three versions and Reloader's console two restarts.
+12 and 13 are to re-capture, on Reloader chart 3.0.0-beta.3: step 9 now
+rotates the password twice, so Vault shows three versions and Reloader's
+console two restarts. Beta.3 also fixes the console's restart time and its
+build label, both visible in 13.
 
 | File | Step | Shows | Highlight | Status |
 |---|---|---|---|---|
