@@ -480,6 +480,7 @@ Deploy it:
 
 ```bash
 oc apply -f checkout.yaml
+oc -n acme-shop rollout status deploy/checkout   # waits for the Secret, about 20 seconds
 oc -n acme-shop get externalsecret,secret checkout-db
 oc -n acme-shop logs deploy/checkout
 ```
