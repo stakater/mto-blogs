@@ -127,6 +127,66 @@ not the long one cut down.
 | Full walkthrough | The chapters table above | One take per chapter |
 | Short cut | Captions, from the demo's lines; voice optional | Only if used |
 
+## Optional: on camera
+
+The screen is voice-only: viewers are watching the terminal and the
+consoles, and a face in the corner would cover them. A person on camera
+helps in two places, as a short opening recorded on its own. Because it's
+separate from the screen footage, it never needs re-filming when the
+tutorial changes.
+
+| Where | Who | Length | Replaces |
+|---|---|---|---|
+| **The demo's opening** | Rasheed, or Rasheed and Raffaele | 10 to 15 s | Part 1, the cold open's narration; the cold open's picture follows |
+| **The short cut's opening** | Rasheed | 3 to 5 s | The short cut's first caption |
+
+**What to say (draft):**
+
+- **Demo, alone:** "I'm Rasheed, from Stakater. In the next four minutes:
+  two teams on one OpenShift cluster, each with its own Vault, and nobody
+  writing Vault configuration. Let's go."
+- **Demo, with Raffaele:** Rasheed: "I'm Rasheed, from Stakater." Raffaele:
+  "And I'm Raffaele, from Red Hat. We'll show you how every team on
+  OpenShift gets its own Vault, automatically." Each records his line on his
+  own; the edit puts them side by side or one after the other.
+- **Short cut:** "Every team on OpenShift, with its own Vault. Watch."
+
+**How to film it:**
+
+- **Framing:** head and shoulders, eyes about a third of the way down the
+  frame, landscape (16:9) for the demo. Film the short cut's opening in
+  portrait (9:16) too, or frame wide enough to crop it.
+- **Eyes on the lens,** not the screen. Learn the lines rather than read
+  them: they're short.
+- **Light from the front,** slightly to one side: a window you face, or one
+  light. Never a window behind you.
+- **Background:** plain and tidy, with some distance behind you. Nothing
+  confidential on a screen or whiteboard.
+- **Sound** from a microphone close to you, not the camera's.
+- **Three or four takes** of each line, at 1080p or 4K, 30 frames a second.
+- **Name the files** `oncam-demo-rasheed-01.mp4`, and put them with the
+  voice files on the shared drive.
+
+## Hardware
+
+What's needed for the voiceover and the on-camera opening, and why. The
+"Good enough" column is fine for a first video; the "Better" column is
+worth it if we make these regularly.
+
+| Item | Good enough | Better | Why it matters |
+|---|---|---|---|
+| **Microphone** | A USB microphone, such as a podcast-style cardioid | The same, on a boom arm, or a wireless clip-on (lavalier) microphone for on camera | **The most important item.** Viewers forgive average video but stop watching when the sound is thin or echoey. A cardioid microphone picks up your voice and little of the room. For on camera, a clip-on microphone stays close to you and out of shot, where a desk microphone would be in the frame. |
+| **Pop filter** | A foam cover or a mesh screen | – | Stops the bursts of air on "p" and "b" from hitting the microphone. Inexpensive, and hard to fix afterwards. |
+| **Headphones** | Any closed-back headphones | – | So you can hear what the microphone hears while recording: hum, echo or clipping, before they're in every take. |
+| **Camera** | A recent phone's rear camera | A mirrorless camera, or a 4K webcam | A recent phone's rear camera already beats most laptop and webcam cameras. Use the rear camera, not the selfie one, which is lower quality. |
+| **Tripod or phone mount** | A small tripod with a phone clamp | – | Keeps the frame steady and at eye level. A camera looking up from a desk is unflattering, and a hand-held shot wobbles. |
+| **Light** | A window in front of you, in daylight | One LED panel with a diffuser, slightly to one side | Phone sensors get grainy in low light. Soft light from the front gives a clean picture without hard shadows. |
+| **Room** | A quiet room with soft furnishings: curtains, a sofa, a rug | Some acoustic panels behind the microphone | Hard, bare walls cause echo, which no microphone fixes. Soft surfaces absorb it. |
+| **Teleprompter** | Not needed: the lines are short | A phone teleprompter app beside the lens | Only if the lines grow. Reading from a screen away from the lens makes your eyes drift. |
+
+The same microphone, pop filter, headphones and room serve the voiceover and
+the on-camera opening, so the two sound alike in the final video.
+
 ## Steps to make it
 
 | # | Step | Who | Output |
@@ -137,7 +197,8 @@ not the long one cut down.
 | 4 | **Write the recording scripts,** following [recording.md](recording.md). One VHS tape per chapter's terminal part, from the tutorial's exact commands. One Playwright script per chapter's browser part, drawing the tutorial's highlights. One `record.sh` that runs them in tutorial order against the cluster. | Stakater | `video/tapes/`, `video/browser/`, `video/record.sh` |
 | 5 | **Dry run.** Run everything once without keeping the footage. Fix timing, waits and anything on screen that doesn't match the tutorial. Fixes to the steps go into the tutorial first. | Stakater | A run with no surprises |
 | 6 | **Reset and record.** Start from a clean cluster again, run `record.sh`, and keep the clips for each chapter. If a screen changed since the screenshots, re-capture them in the same run. | Stakater | `video/clips/NN-*.mp4` |
-| 7 | **Record the voiceover.** Each version's script, as in the Narration table, in a quiet room. | One author | `video/voice/NN-*.wav` |
+| 7 | **Record the voiceover.** Each version's script, as in the Narration table, in a quiet room. | Rasheed | `video/voice/NN-*.wav` |
+| 7b | *(Optional)* **Film the on-camera openings,** as in [Optional: on camera](#optional-on-camera). | Rasheed, and Raffaele if he joins | `oncam-*.mp4` on the shared drive |
 | 8 | **Assemble.** An `assemble.sh` joins the clips in order, speeds up the waits with an on-screen "sped up" note, adds the chapter cards and "In production" captions, builds the split screen for chapter 8, lays the voiceover on top, adds the opening and end cards, and writes the subtitle file and the YouTube chapter list. That's the full walkthrough. Then cut the demo and the short cut from the same clips, each with its own narration. | Stakater | `walkthrough.mp4`, `demo.mp4`, `short.mp4`, a subtitle file for each, thumbnails |
 | 9 | **Review.** All three authors watch all three versions against the [video checklist](../../docs/guidelines/video.md#checklist). | The three authors | Approved, or a list of fixes |
 | 10 | **Publish.** YouTube on the tutorial's publication day: the demo and the full walkthrough. The short cut on LinkedIn. The demo embedded in the posts if Red Hat Developer allows it. | Stakater, then everyone reposts | Live links, added to the tutorial |
@@ -148,6 +209,6 @@ are large; they are kept out of Git and stored with the published video.
 
 ## Open questions
 
-- Who records the voiceover?
+- Will Raffaele record his line for a joint opening?
 - Does Red Hat Developer allow embedded video in the posts?
 - Which YouTube channel publishes it, and can Red Hat share it on theirs?
