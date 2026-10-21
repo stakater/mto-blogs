@@ -43,9 +43,14 @@ On the machine that records:
 brew install vhs ffmpeg        # VHS also installs ttyd, which it needs
 node --version                 # 20 or later
 cd 02-try-it-tenants-and-vault-enterprise/video
-npm init -y >/dev/null && npm install --save-dev playwright
+npm install                    # Playwright, pinned in package.json
 npx playwright install chromium
 ```
+
+If Homebrew has no VHS or ffmpeg bottles for your macOS (13 has none, so it
+builds 16 formulae from source), skip that line and install Docker:
+`record.sh` then runs VHS and ffmpeg from VHS's container image, with Linux
+`oc` and `helm` it downloads to `.tools/`.
 
 Secrets come from files, never typed, never printed. Before recording, set:
 
@@ -129,6 +134,11 @@ Rules for every tape:
   that reads the password must never run where it's recorded.
 - **Things only the recording needs run hidden too:** setting variables such
   as `APPS_DOMAIN`, or `clear` between parts.
+- **Keep each part within one screen,** 34 rows at these settings. VHS
+  0.10's `Wait+Screen` reads only the terminal's first screen since the last
+  `clear`: once the output scrolls, it can't see new text, and the wait times
+  out. Put a hidden `clear` between parts, for example after `cat` of a long
+  file. A plain `Wait` (the prompt is back) still works after scrolling.
 
 ## Browser scripts
 

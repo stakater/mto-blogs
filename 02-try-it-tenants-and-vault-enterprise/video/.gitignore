@@ -1,0 +1,4 @@
+# Output and local tools: never committed.
+clips/
+node_modules/
+.tools/
