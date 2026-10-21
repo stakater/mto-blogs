@@ -11,8 +11,14 @@ await cause.waitFor({ timeout: 60000 });
 mark(s, 'reloader');
 await pause(page);
 const restarts = page.locator('tbody tr').filter({ hasText: 'Deployment' });
-// The table's wrapper hides overflow, which would cut the outlines.
-await restarts.first().evaluate((el) => { el.closest('table').parentElement.style.overflow = 'visible'; });
+// The event log is a 400 px scroll box whose wrappers hide overflow, which
+// would cut the outlines' sides: let it take its full height and show them.
+await restarts.first().evaluate((el) => {
+  const card = el.closest('.bg-card');
+  for (let n = el.closest('table').parentElement; n && n !== card; n = n.parentElement) {
+    n.style.overflow = 'visible'; n.style.height = 'auto'; n.style.maxHeight = 'none';
+  }
+});
 await highlight(cause);
 await highlight(restarts.nth(0));
 await highlight(restarts.nth(1));

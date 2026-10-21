@@ -15,6 +15,8 @@ Wait
 Show
 Type "oc apply -f checkout.yaml" Enter
 Wait+Screen /deployment.apps.checkout (created|configured|unchanged)/
+Type "oc -n acme-shop rollout status deploy/checkout   # waits for the Secret, about 20 seconds" Enter
+Wait+Screen /"checkout" successfully rolled out/
 Type "oc -n acme-shop get externalsecret,secret checkout-db" Enter
 Wait
 Sleep 2s

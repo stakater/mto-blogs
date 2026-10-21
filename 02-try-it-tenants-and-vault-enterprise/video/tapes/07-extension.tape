@@ -7,7 +7,7 @@ Type "export TOP_NS=multi-tenant-operator TOP_SA=tenant-operator-template-operat
 Wait
 Show
 Type `helm upgrade --install mto-extension-vault-enterprise-bootstrap \` Enter
-Type `  oci://ghcr.io/stakater/public/charts/mto-extension-vault-enterprise-bootstrap \` Enter
+Type `  oci://ghcr.io/stakater/charts/mto-extension-vault-enterprise-bootstrap \` Enter
 Type `  -n vault-config --create-namespace \` Enter
 Type `  --set parent.vaultServer=http://vault.vault.svc:8200 \` Enter
 Type `  --set templateOperator.namespace="$TOP_NS" \` Enter
