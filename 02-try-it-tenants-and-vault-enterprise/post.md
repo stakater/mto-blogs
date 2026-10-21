@@ -559,13 +559,11 @@ Reloader's console, at the address from step 4, keeps the history. Open the
 application `checkout` in `acme-shop`: its event log shows both restarts,
 each caused by the Secret `checkout-db`.
 
-> 📷 **Screenshot to capture** (`13-reloader-console.png`): Reloader's console, the application `checkout` in namespace `acme-shop`: the Secret `checkout-db` it depends on, and an event log with two restarts.
-> **Highlight:** the Secret `checkout-db`, and the two rows of the event log.
+![Reloader's console, application checkout in namespace acme-shop: the Secret checkout-db it depends on, and an event log with two restarts, each with its time](screenshots/13-reloader-console.png)
 
 In the Vault UI, the secret now has three versions:
 
-> 📷 **Screenshot to capture** (`12-vault-secret-versions.png`): The Vault UI in namespace acme: Version History of dev/acme-shop/checkout/db, with versions 1, 2 and 3.
-> **Highlight:** versions 1, 2 and 3.
+![The Vault UI in namespace acme: Version History of dev/acme-shop/checkout/db, with versions 1, 2 and 3](screenshots/12-vault-secret-versions.png)
 
 ## Step 10: Check the isolation
 
