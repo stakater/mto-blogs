@@ -80,7 +80,7 @@ video/
     lib.mjs                launch, sign-in helpers, highlight()
     02-install-mto.mjs
     ...
-  clips/                   output; never committed (.gitignore)
+  clips/                   output, in .gitignore; the dry run's clips are committed for review
 ```
 
 Name every file `NN-<chapter>`, with `NN` the chapter number from the
@@ -250,6 +250,6 @@ On the pull request:
 - Anything on screen that looked wrong or confusing, such as the Reloader
   console's timestamp or its "Alpha-dev" label.
 
-Commit the scripts, tapes and `package.json` on a new branch from
-`content-strategy`, named `video-01-recording`. Never commit clips, audio
-or anything holding a secret.
+The scripts, tapes and `package.json` are committed here, in `video/`, with
+the dry run's clips for review. Never commit audio, or anything holding a
+secret.
