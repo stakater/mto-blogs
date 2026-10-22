@@ -1,0 +1,39 @@
+# Register OpenShift and Vault as clients of the Dex that ships with
+# Multi-Tenant Operator. The Dex Config Operator, which Multi-Tenant Operator
+# also runs, turns these resources into Dex's configuration.
+#
+# Replace the two <...> hosts before applying. The client secrets live in
+# Secrets created by the tutorial, never in this file.
+apiVersion: auth.stakater.com/v1alpha1
+kind: Client
+metadata:
+  name: openshift
+  namespace: multi-tenant-operator
+spec:
+  id: openshift
+  name: OpenShift
+  public: false
+  redirectURIs:
+    # "tenants" is the identity provider's name in OpenShift's OAuth config.
+    - https://<oauth-openshift host>/oauth2callback/tenants
+  secretRef:
+    name: dex-openshift-client
+    key: client-secret
+---
+apiVersion: auth.stakater.com/v1alpha1
+kind: Client
+metadata:
+  name: vault
+  namespace: multi-tenant-operator
+spec:
+  # Also the audience every tenant's Vault sign-in role accepts.
+  id: vault
+  name: Vault
+  public: false
+  redirectURIs:
+    # The vault CLI's local callback, and the Vault UI's.
+    - http://localhost:8250/oidc/callback
+    - https://<vault-ui host>/ui/vault/auth/oidc/sso/oidc/callback
+  secretRef:
+    name: dex-vault-client
+    key: client-secret

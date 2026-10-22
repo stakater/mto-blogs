@@ -1,0 +1,36 @@
+# The two tenants from the first tutorial, now naming the identity-provider
+# groups that may use them. Multi-Tenant Operator binds each group in every
+# project the tenant owns: owners get admin, editors edit, viewers view.
+# The individual users from the first tutorial are gone on purpose: groups are
+# now the only way in, so removing someone from a group removes their access.
+apiVersion: tenantoperator.stakater.com/v1beta3
+kind: Tenant
+metadata:
+  name: acme
+spec:
+  accessControl:
+    owners:
+      groups: [acme-admins]
+    editors:
+      groups: [acme-editors]
+    viewers:
+      groups: [acme-viewers]
+  namespaces:
+    withTenantPrefix:
+      - shop
+---
+apiVersion: tenantoperator.stakater.com/v1beta3
+kind: Tenant
+metadata:
+  name: globex
+spec:
+  accessControl:
+    owners:
+      groups: [globex-admins]
+    editors:
+      groups: [globex-editors]
+    viewers:
+      groups: [globex-viewers]
+  namespaces:
+    withTenantPrefix:
+      - web
