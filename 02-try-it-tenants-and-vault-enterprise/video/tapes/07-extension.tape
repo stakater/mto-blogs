@@ -8,7 +8,7 @@ Wait
 Show
 Type `helm upgrade --install mto-extension-vault-enterprise-bootstrap \` Enter
 Type `  oci://ghcr.io/stakater/charts/mto-extension-vault-enterprise-bootstrap \` Enter
-Type `  -n vault-config --create-namespace \` Enter
+Type `  --version 0.1.0 -n vault-config --create-namespace \` Enter
 Type `  --set parent.vaultServer=http://vault.vault.svc:8200 \` Enter
 Type `  --set templateOperator.namespace="$TOP_NS" \` Enter
 Type `  --set templateOperator.serviceAccountName="$TOP_SA"` Enter
