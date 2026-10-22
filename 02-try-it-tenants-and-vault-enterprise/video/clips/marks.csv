@@ -1,0 +1,14 @@
+08-vault-split,vault root /vault/dashboard,3.9
+08-vault-split,picker open,5.9
+08-vault-split,acme and globex appear,6.0
+08-consoles,tenant tab,6.4
+08-consoles,project label,19.4
+08-consoles,mto tenants,27.0
+08-consoles,mto namespaces,35.4
+09-app,vault acme /vault/secrets-engines/kv/kv/dev%2Facme-shop%2Fcheckout%2Fdb,4.4
+09-app,vault acme /vault/policy/acl/kv.acme.acme-shop.checkout,16.5
+09-app,secret owner,29.2
+00-cold-open,vault root /vault/dashboard,3.4
+00-cold-open,mto tenants,15.2
+10-rotate,reloader,1.2
+10-rotate,vault acme /vault/secrets-engines/kv/kv/dev%2Facme-shop%2Fcheckout%2Fdb,15.8

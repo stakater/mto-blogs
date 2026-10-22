@@ -1,0 +1,12 @@
+{
+  "name": "post-2-video",
+  "private": true,
+  "type": "module",
+  "description": "Records the screen for the post 2 video: VHS tapes for the terminal, Playwright scripts for the browser.",
+  "scripts": {
+    "record": "./record.sh"
+  },
+  "devDependencies": {
+    "playwright": "1.48.2"
+  }
+}
