@@ -1,0 +1,19 @@
+# Anna's Application, in her team's own namespace for Applications. It
+# deploys acme's repository into acme-dev, and keeps it in sync.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hello
+  namespace: acme-argocd
+spec:
+  project: acme
+  source:
+    repoURL: https://github.com/stakater/mto-blogs-acme-gitops
+    targetRevision: main
+    path: .
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: acme-dev
+  syncPolicy:
+    automated:
+      selfHeal: true

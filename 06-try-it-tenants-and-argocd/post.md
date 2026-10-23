@@ -1,0 +1,503 @@
+# Hands-on: tenants on OpenShift, carried into Argo CD
+
+<!--
+Outlet: Red Hat Developer (tutorial), then the Stakater blog, canonical link back.
+Companion to post 5, "One tenant, from OpenShift to Argo CD", which explains why.
+Screenshots: each "Screenshot to capture" block is a slot, filled during the
+validation run. The full list, with highlights, is in screenshots/README.md.
+-->
+
+In [One tenant, from OpenShift to Argo CD](../05-tenants-and-argocd/post.md),
+we showed how a team defined once on OpenShift, as a tenant, gets its own
+Argo CD project, kept in step with the team. This tutorial builds it, step by
+step.
+
+By the end you'll have:
+
+- two tenants, `acme` and `globex`, each with its own Argo CD project, created
+  and kept up to date by Multi-Tenant Operator
+- Anna, on the `acme` team, deploying her team's app by GitOps, on her own,
+  without access to Argo CD's control plane
+- proof that Argo CD refuses anything outside her team's boundary: another
+  team's namespace, another team's repository, another team's project
+- a new namespace for the team that becomes a destination on its own, and a
+  hand edit to a project that's refused
+
+Allow about an hour.
+
+## Before you start
+
+You need:
+
+- An OpenShift 4 cluster, and `cluster-admin` on it
+- `oc`, `helm` and `htpasswd` on your machine. `htpasswd` comes with macOS;
+  on Linux it's in the `httpd-tools` or `apache2-utils` package.
+- A private browser window, for signing in as Anna
+- The example files:
+
+  ```bash
+  git clone https://github.com/stakater/mto-blogs.git
+  cd mto-blogs/06-try-it-tenants-and-argocd/examples
+  ```
+
+Here's what you'll install:
+
+| Component | Version | From | Job |
+|---|---|---|---|
+| Multi-Tenant Operator | 1.10.0 or later | Software Catalog (OperatorHub) | Owns the tenants, and runs Template Operator |
+| Red Hat OpenShift GitOps | 1.22 (Argo CD 3.5) | Software Catalog (OperatorHub) | Argo CD: deploys from Git, and enforces each project |
+| Argo CD extension for Multi-Tenant Operator | 0.7.1 | `oci://ghcr.io/stakater/charts` | Turns each tenant into an Argo CD project |
+
+Each tenant deploys from its own Git repository. This tutorial uses two
+small public ones, so you don't need a Git account:
+[stakater/mto-blogs-acme-gitops](https://github.com/stakater/mto-blogs-acme-gitops)
+and [stakater/mto-blogs-globex-gitops](https://github.com/stakater/mto-blogs-globex-gitops).
+Each holds a small web server; the same files are in
+[`examples/gitops/`](examples/gitops/).
+
+The Multi-Tenant Operator Basic edition is free with no expiry, and manages
+up to two tenants. That's exactly what this tutorial uses.
+
+## Step 1: Install Multi-Tenant Operator
+
+If you followed the [Vault tutorial](../02-try-it-tenants-and-vault-enterprise/post.md)
+on this cluster, Multi-Tenant Operator and Template Operator are already
+running: set `TOP_NS` and `TOP_SA` as below, and go to step 2.
+
+In the OpenShift console, go to **Ecosystem → Software Catalog** (on older
+versions, **Operators → OperatorHub**), search for **multi tenant**, and
+install **Multi Tenant Operator** with the defaults. It installs into the
+`multi-tenant-operator` namespace.
+
+Switch on the Template Operator it ships with, and its console:
+
+```bash
+oc -n multi-tenant-operator patch integrationconfig tenant-operator-config --type merge -p '{
+  "spec": {
+    "components": {"templateOperatorV2": {"mode": "Managed"}, "console": true, "showback": true},
+    "accessControl": {"privileged": {"users": ["mto@stakater.com"]}}
+  }}'
+```
+
+When Template Operator is running, note the namespace and ServiceAccount it
+runs as. The extension needs both in step 4:
+
+```bash
+oc get deploy -A -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,SA:.spec.template.spec.serviceAccountName \
+  | grep template-operator-v2
+
+export TOP_NS=<namespace from the output>
+export TOP_SA=<ServiceAccount from the output>
+```
+
+OpenShift GitOps runs in `openshift-gitops`, which Multi-Tenant Operator
+already treats as privileged, like every `openshift-*` namespace. Nothing
+else to configure.
+
+## Step 2: Install Red Hat OpenShift GitOps
+
+In **Ecosystem → Software Catalog**, search for **gitops** and install
+**Red Hat OpenShift GitOps** with the defaults.
+
+> 📷 **Screenshot to capture** (`01-operatorhub-gitops.png`): Software Catalog search for "gitops": the Red Hat OpenShift GitOps tile.
+> **Highlight:** the Red Hat OpenShift GitOps tile.
+
+The operator creates an Argo CD instance in `openshift-gitops`. Wait for it:
+
+```bash
+oc -n openshift-gitops wait deploy/openshift-gitops-server --for=condition=Available --timeout=600s
+```
+
+By default, Argo CD reads Applications only from its own namespace. Let it
+read them from every namespace ending in `-argocd`, where each team will
+keep its own:
+
+```bash
+oc -n openshift-gitops patch argocd openshift-gitops --type merge \
+  -p '{"spec":{"sourceNamespaces":["*-argocd"]}}'
+
+oc -n openshift-gitops rollout status deploy/openshift-gitops-server --timeout=300s
+oc -n openshift-gitops rollout status statefulset/openshift-gitops-application-controller --timeout=300s
+```
+
+**What just happened:** Argo CD now looks for Applications in any namespace
+whose name ends in `-argocd`. That alone grants nothing: each team's project
+still decides which of those namespaces it accepts, and the extension lists
+only the team's own.
+
+## Step 3: Add two people
+
+Anna works on `acme`, and Ben on `globex`. Create them as OpenShift users,
+with a password file, and put each in their team's group:
+
+```bash
+ANNA_PASSWORD=$(openssl rand -hex 8)
+BEN_PASSWORD=$(openssl rand -hex 8)
+htpasswd -c -B -b users.htpasswd anna "$ANNA_PASSWORD"
+htpasswd -B -b users.htpasswd ben "$BEN_PASSWORD"
+oc -n openshift-config create secret generic tutorial-users --from-file=htpasswd=users.htpasswd
+rm users.htpasswd
+
+IDP='{"name":"tutorial","mappingMethod":"claim","type":"HTPasswd","htpasswd":{"fileData":{"name":"tutorial-users"}}}'
+if [ -n "$(oc get oauth cluster -o jsonpath='{.spec.identityProviders}')" ]; then
+  oc patch oauth cluster --type json -p "[{\"op\":\"add\",\"path\":\"/spec/identityProviders/-\",\"value\":$IDP}]"
+else
+  oc patch oauth cluster --type json -p "[{\"op\":\"add\",\"path\":\"/spec/identityProviders\",\"value\":[$IDP]}]"
+fi
+sleep 30
+oc wait clusteroperator authentication --for=condition=Progressing=False --timeout=600s
+
+oc adm groups new acme-owners anna
+oc adm groups new globex-owners ben
+
+echo "anna: $ANNA_PASSWORD   ben: $BEN_PASSWORD"
+```
+
+Note both passwords. You'll sign in as Anna in step 6.
+
+**In production,** people and groups come from your identity provider, not a
+password file. The
+[one-login tutorial](../04-try-it-one-login-for-tenant-members/post.md) in
+this series connects one; Argo CD on OpenShift GitOps signs people in through
+OpenShift, so it picks up the same groups.
+
+## Step 4: Install the Argo CD extension
+
+[`values.yaml`](examples/values.yaml) holds the extension's settings: Argo
+CD's namespace, a repository pattern that gives each tenant its own
+repository, and Applications in each tenant's own `<tenant>-argocd`
+namespace.
+
+```bash
+helm upgrade --install mto-extension-argocd \
+  oci://ghcr.io/stakater/charts/mto-extension-argocd --version 0.7.1 \
+  -n multi-tenant-operator -f values.yaml \
+  --set rbac.serviceAccount.name="$TOP_SA" \
+  --set rbac.serviceAccount.namespace="$TOP_NS"
+```
+
+**What just happened:** the extension gave Template Operator one template:
+an Argo CD project per tenant. It acts only on tenants that opt in with an
+annotation, and there are none yet, so Argo CD hasn't changed.
+
+**In production,** keep the repository pattern templated on the tenant, as
+it is here. A single shared repository would let every team deploy every
+other team's code.
+
+## Step 5: Create two tenants
+
+[`tenants.yaml`](examples/tenants.yaml) defines two teams. Each opts in to
+Argo CD with one annotation, names its owners' group, and gets two
+namespaces: one for its workloads, and one for its Argo CD Applications.
+
+```yaml
+apiVersion: tenantoperator.stakater.com/v1beta3
+kind: Tenant
+metadata:
+  name: acme
+  annotations:
+    argocd.tenantoperator.stakater.com/enabled: "true"
+spec:
+  quota: small
+  accessControl:
+    owners:
+      groups: [acme-owners]
+  namespaces:
+    withTenantPrefix:
+      - dev
+      - argocd
+```
+
+```bash
+oc apply -f tenants.yaml
+```
+
+Multi-Tenant Operator creates `acme-dev`, `acme-argocd`, `globex-dev` and
+`globex-argocd`. Within moments, Argo CD has a project for each tenant:
+
+```bash
+oc -n openshift-gitops get appprojects
+```
+
+```
+NAME      AGE
+acme      20s
+default   15m
+globex    20s
+```
+
+Look at what `acme`'s project allows:
+
+```bash
+oc -n openshift-gitops get appproject acme -o jsonpath='
+destinations: {.spec.destinations[*].namespace}
+repository:   {.spec.sourceRepos}
+applications from: {.spec.sourceNamespaces}
+roles:        {.spec.roles[*].name}
+'
+```
+
+```
+destinations: acme-argocd acme-dev
+repository:   ["https://github.com/stakater/mto-blogs-acme-gitops"]
+applications from: ["acme-argocd"]
+roles:        acme-owner acme-edit acme-view
+```
+
+Only acme's namespaces, only acme's repository, and Applications only from
+acme's own namespace. `openshift-gitops` is never a destination.
+
+In Multi-Tenant Operator's console, the **Tenants** page shows both teams.
+Open the console's route, and sign in as `mto@stakater.com` with the password
+Multi-Tenant Operator generated:
+
+```bash
+oc -n multi-tenant-operator get routes | grep console
+oc -n multi-tenant-operator get secret tenant-operator-console-credentials \
+  -o jsonpath='{.data.passwordPlainText}' | base64 -d; echo
+```
+
+> 📷 **Screenshot to capture** (`02-mto-console-tenants.png`): The Multi-Tenant Operator console, Tenants page, listing acme and globex.
+> **Highlight:** the rows `acme` and `globex`.
+
+> 📷 **Screenshot to capture** (`03-mto-console-namespaces.png`): The Multi-Tenant Operator console, Namespaces page: acme-dev and acme-argocd under tenant acme, globex-dev and globex-argocd under tenant globex.
+> **Highlight:** the four namespaces, with their tenant.
+
+**In production,** connect your identity provider and delete this built-in
+account: anyone who can read Secrets in `multi-tenant-operator` can read its
+password, and it sees every tenant.
+
+In Argo CD, as an administrator, the projects are listed under **Settings →
+Projects**. Open Argo CD and sign in with **Log in via OpenShift**, as your
+`cluster-admin` user:
+
+```bash
+echo "https://$(oc -n openshift-gitops get route openshift-gitops-server -o jsonpath='{.spec.host}')"
+```
+
+> 📷 **Screenshot to capture** (`04-argocd-projects.png`): Argo CD as an administrator, Settings → Projects: acme, default and globex.
+> **Highlight:** the projects `acme` and `globex`.
+
+**What just happened:** you created two tenants and didn't touch Argo CD.
+Template Operator rendered a project for each, from the tenant's namespaces
+and owners, and keeps it in step with the tenant from now on.
+
+## Step 6: Anna deploys her team's app
+
+Anna signs in to Argo CD with her OpenShift account. In the private browser
+window, open Argo CD, choose **Log in via OpenShift**, then the **tutorial**
+identity provider, and sign in as `anna`.
+
+> 📷 **Screenshot to capture** (`05-argocd-login.png`): The Argo CD sign-in page, with "Log in via OpenShift".
+> **Highlight:** the "Log in via OpenShift" button.
+
+She has no Applications yet. She creates one from her terminal, in her
+team's own namespace for Applications. Give her a separate login, so your
+own stays as it is:
+
+```bash
+API=$(oc whoami --show-server)
+oc login "$API" -u anna -p "$ANNA_PASSWORD" --kubeconfig anna.kubeconfig
+anna() { oc --kubeconfig anna.kubeconfig "$@"; }
+```
+
+If your cluster's API certificate isn't trusted on your machine, add
+`--insecure-skip-tls-verify` to the `oc login`, for this learning setup
+only.
+
+[`acme-app.yaml`](examples/acme-app.yaml) deploys acme's repository into
+`acme-dev`, and keeps it in sync:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hello
+  namespace: acme-argocd
+spec:
+  project: acme
+  source:
+    repoURL: https://github.com/stakater/mto-blogs-acme-gitops
+    targetRevision: main
+    path: .
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: acme-dev
+  syncPolicy:
+    automated:
+      selfHeal: true
+```
+
+```bash
+anna apply -f acme-app.yaml
+sleep 30
+anna -n acme-argocd get application hello -o jsonpath='{.status.sync.status} {.status.health.status}{"\n"}'
+anna -n acme-dev get pods
+```
+
+```
+Synced Healthy
+NAME                     READY   STATUS    RESTARTS   AGE
+hello-6d9c8f7b5d-x2k4p   1/1     Running   0          25s
+```
+
+In Argo CD, Anna now sees her Application, in project `acme`, and nothing
+from any other team:
+
+> 📷 **Screenshot to capture** (`06-argocd-anna-apps.png`): Argo CD as Anna: the Application hello in project acme, Synced and Healthy.
+> **Highlight:** the Application `hello`, and its project `acme`.
+
+> 📷 **Screenshot to capture** (`07-argocd-hello-synced.png`): Argo CD as Anna: the Application hello opened, its resource tree with the Deployment, ReplicaSet, Pod and Service, all healthy.
+> **Highlight:** the Synced and Healthy status.
+
+**What just happened:** Anna is in `acme-owners`, so Multi-Tenant Operator
+gave her `admin` in acme's namespaces, which is how she could create an
+Application in `acme-argocd`. Argo CD read it from there, checked it against
+project `acme` (the namespace it came from, the repository, the
+destination), and synced it. Anna never had access to `openshift-gitops`.
+
+## Step 7: Check the boundary
+
+Now Anna tries to cross her team's boundary, three ways.
+[`refused.yaml`](examples/refused.yaml) holds three Applications: one
+deploying into globex's namespace, one deploying from globex's repository,
+and one claiming globex's project.
+
+```bash
+anna apply -f refused.yaml
+sleep 15
+for a in wrong-destination wrong-repository wrong-project; do
+  echo "$a: $(anna -n acme-argocd get application $a -o jsonpath='{.status.conditions[0].message}')"
+done
+```
+
+```
+wrong-destination: application destination server 'https://kubernetes.default.svc' and namespace 'globex-dev' do not match any of the allowed destinations in project 'acme'
+wrong-repository: application repo https://github.com/stakater/mto-blogs-globex-gitops is not permitted in project 'acme'
+wrong-project: app is not allowed in project "globex", or the project does not exist
+```
+
+Argo CD refuses all three, and deploys nothing. In the Argo CD UI, Anna sees
+why:
+
+> 📷 **Screenshot to capture** (`08-argocd-refused.png`): Argo CD as Anna: the Application wrong-destination, with the error that globex-dev isn't an allowed destination in project acme.
+> **Highlight:** the error message.
+
+She can't go around Argo CD either: she has no access to globex's namespace
+for Applications, or to Argo CD's own.
+
+```bash
+anna auth can-i create applications.argoproj.io -n globex-argocd
+anna auth can-i create applications.argoproj.io -n openshift-gitops
+```
+
+```
+no
+no
+```
+
+Remove the three:
+
+```bash
+anna delete -f refused.yaml
+```
+
+## Step 8: The team grows
+
+`acme` needs a production namespace. Add it to the tenant, as a platform
+administrator:
+
+```bash
+oc patch tenant acme --type json \
+  -p '[{"op":"add","path":"/spec/namespaces/withTenantPrefix/-","value":"prod"}]'
+sleep 20
+oc -n openshift-gitops get appproject acme -o jsonpath='{.spec.destinations[*].namespace}{"\n"}'
+```
+
+```
+acme-argocd acme-dev acme-prod
+```
+
+> 📷 **Screenshot to capture** (`09-argocd-project-destinations.png`): Argo CD as an administrator, Settings → Projects → acme: the destinations acme-argocd, acme-dev and acme-prod.
+> **Highlight:** the destination `acme-prod`.
+
+**What just happened:** Multi-Tenant Operator created `acme-prod`, and
+Template Operator added it to acme's project. Anna can deploy there now, and
+nobody edited the project.
+
+## Step 9: Hand edits are refused
+
+Someone tries to give `acme` access to globex's namespace by editing the
+project directly:
+
+```bash
+oc -n openshift-gitops patch appproject acme --type json \
+  -p '[{"op":"add","path":"/spec/destinations/-","value":{"server":"https://kubernetes.default.svc","namespace":"globex-dev"}}]'
+```
+
+```
+Error from server (Forbidden): admission webhook "..." denied the request: ...
+```
+
+**What just happened:** the project belongs to the tenant. Template Operator
+refuses changes to it that don't come from the tenant, so a project can't
+quietly drift from its team. To change what a team may do, change the
+tenant.
+
+## Clean up
+
+Remove things in this order:
+
+```bash
+# Anna's Application, and her login
+anna delete -f acme-app.yaml
+rm anna.kubeconfig
+
+# The tenants, then the extension. Their Argo CD projects are released,
+# not deleted, so delete those last.
+oc delete -f tenants.yaml
+helm uninstall mto-extension-argocd -n multi-tenant-operator
+oc -n openshift-gitops delete appproject acme globex
+
+# The two people
+oc delete group acme-owners globex-owners
+oc delete user anna ben
+oc delete identity tutorial:anna tutorial:ben
+IDX=$(( $(oc get oauth cluster -o jsonpath='{range .spec.identityProviders[*]}{.name}{"\n"}{end}' \
+  | grep -n -x tutorial | cut -d: -f1) - 1 ))
+oc patch oauth cluster --type json -p "[{\"op\":\"remove\",\"path\":\"/spec/identityProviders/$IDX\"}]"
+oc -n openshift-config delete secret tutorial-users
+```
+
+To remove OpenShift GitOps and Multi-Tenant Operator as well, uninstall them
+from **Installed Operators**.
+
+## What you built
+
+Two teams, defined once on OpenShift, each with its own Argo CD project.
+Each team deploys from its own repository into its own namespaces, from its
+own namespace for Applications, and never touches Argo CD's control plane.
+The projects follow the teams: a new namespace became a destination on its
+own, and a hand edit was refused.
+
+The free edition stops at two tenants. When a third team arrives, that's
+where Multi-Tenant Operator Enterprise comes in.
+
+## About Multi-Tenant Operator
+
+Multi-Tenant Operator, from Stakater, turns a shared OpenShift cluster into
+a platform of tenants. Each team is defined once, and that boundary reaches
+its projects, its access, its quotas, its costs and, through extensions,
+tools such as Argo CD and Vault. It's a Red Hat certified operator, available
+in OperatorHub.
+
+- **Try it free:** the Basic edition manages up to two tenants, with no
+  expiry and no capability held back.
+- **Learn more:** [docs.stakater.com/mto](https://docs.stakater.com/mto/)
+- **Running more than two teams?** Multi-Tenant Operator Enterprise adds
+  unlimited tenants and a support commitment. Contact
+  [sales@stakater.com](mailto:sales@stakater.com).
+
+---
+
+*Ayesha Arshad, Stakater. Rasheed Amir, Stakater. Raffaele Spazzoli, Red Hat.*

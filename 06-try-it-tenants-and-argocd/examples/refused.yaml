@@ -1,0 +1,50 @@
+# Three Applications that Argo CD must refuse, each crossing the boundary of
+# tenant acme in a different way.
+
+# 1. Deploys into another tenant's namespace.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: wrong-destination
+  namespace: acme-argocd
+spec:
+  project: acme
+  source:
+    repoURL: https://github.com/stakater/mto-blogs-acme-gitops
+    targetRevision: main
+    path: .
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: globex-dev
+---
+# 2. Deploys from another tenant's repository.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: wrong-repository
+  namespace: acme-argocd
+spec:
+  project: acme
+  source:
+    repoURL: https://github.com/stakater/mto-blogs-globex-gitops
+    targetRevision: main
+    path: .
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: acme-dev
+---
+# 3. Claims another tenant's project.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: wrong-project
+  namespace: acme-argocd
+spec:
+  project: globex
+  source:
+    repoURL: https://github.com/stakater/mto-blogs-globex-gitops
+    targetRevision: main
+    path: .
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: globex-dev

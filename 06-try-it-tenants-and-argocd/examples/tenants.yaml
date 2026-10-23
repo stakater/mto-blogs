@@ -1,0 +1,46 @@
+# Two tenants, opted in to Argo CD with one annotation each: the Basic
+# edition's limit, and enough to see isolation. Each gets a namespace for its
+# workloads (<tenant>-dev) and one for its Argo CD Applications
+# (<tenant>-argocd).
+#
+# Every tenant names a Quota. This one only caps the number of pods.
+apiVersion: tenantoperator.stakater.com/v1beta1
+kind: Quota
+metadata:
+  name: small
+spec:
+  resourcequota:
+    hard:
+      pods: "10"
+---
+apiVersion: tenantoperator.stakater.com/v1beta3
+kind: Tenant
+metadata:
+  name: acme
+  annotations:
+    argocd.tenantoperator.stakater.com/enabled: "true"
+spec:
+  quota: small
+  accessControl:
+    owners:
+      groups: [acme-owners]
+  namespaces:
+    withTenantPrefix:
+      - dev
+      - argocd
+---
+apiVersion: tenantoperator.stakater.com/v1beta3
+kind: Tenant
+metadata:
+  name: globex
+  annotations:
+    argocd.tenantoperator.stakater.com/enabled: "true"
+spec:
+  quota: small
+  accessControl:
+    owners:
+      groups: [globex-owners]
+  namespaces:
+    withTenantPrefix:
+      - dev
+      - argocd
