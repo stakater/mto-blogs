@@ -28,7 +28,7 @@ run `record.sh` again on a clean cluster.
 
 | Run | When | Cluster | Purpose |
 |---|---|---|---|
-| **Dry run** | Now | Any cluster you can reset, on the Reloader beta the tutorial pins (chart 3.0.0-beta.3) | Write and debug the scripts. The footage is thrown away. |
+| **Dry run** | Now | Any cluster you can reset, on the Reloader beta the tutorial pins (chart 3.0.0-beta.4) | Write and debug the scripts. The footage is thrown away. |
 | **Real recording** | After the Reloader console release | A **fresh** OpenShift 4.22 cluster, with a neutral name | The footage we use |
 
 The installs (chapters 2 to 7) need a cluster with none of the tutorial

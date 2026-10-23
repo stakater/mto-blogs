@@ -18,6 +18,9 @@ step 9 now rotates the password twice, so Vault shows three versions and
 Reloader's console two restarts. Beta.3 also fixes the console's restart time
 and its build label, both visible in 13.
 
+13 was re-captured again on 2026-10-23, on chart 3.0.0-beta.4 (console
+0.0.42), which drops the event log's "Reload #" column.
+
 | File | Step | Shows | Highlight | Status |
 |---|---|---|---|---|
 | `01-operatorhub-mto.png` | 1 | Software Catalog search for "multi tenant": the Multi Tenant Operator tile with the "Certified" badge | The Multi Tenant Operator tile | Captured |
