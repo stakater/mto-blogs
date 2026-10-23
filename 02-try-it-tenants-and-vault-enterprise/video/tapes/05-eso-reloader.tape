@@ -35,7 +35,7 @@ Wait
 Show
 Type "helm repo add stakater https://stakater.github.io/stakater-charts" Enter
 Wait
-Type `helm upgrade --install reloader stakater/reloader --version 3.0.0-beta.3 \` Enter
+Type `helm upgrade --install reloader stakater/reloader --version 3.0.0-beta.4 \` Enter
 Type `  -n reloader --create-namespace \` Enter
 Type `  --set reloader.isOpenshift=true \` Enter
 Type `  --set reloader.deployment.securityContext.runAsUser=null \` Enter
