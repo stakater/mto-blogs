@@ -9,21 +9,21 @@ validation run. The full list, with highlights, is in screenshots/README.md.
 
 In [One tenant, from OpenShift to Argo CD](../05-tenants-and-argocd/post.md),
 we showed how a team defined once on OpenShift, as a tenant, gets its own
-Argo CD project, kept in step with the team. This tutorial builds it, step by
+AppProject, kept in step with the team. This tutorial builds it, step by
 step.
 
 By the end you'll have:
 
-- two tenants, `acme` and `globex`, each with its own Argo CD project, created
+- two tenants, `acme` and `globex`, each with its own AppProject, created
   and kept up to date by Multi-Tenant Operator
 - Anna, on the `acme` team, deploying her team's app by GitOps, on her own,
   without access to Argo CD's control plane
 - proof that Argo CD refuses anything outside her team's boundary: another
-  team's namespace, repository or project, Argo CD's own namespace, and the
+  team's namespace, repository or AppProject, Argo CD's own namespace, and the
   quota Multi-Tenant Operator sets
 - people joining and leaving a team, a namespace added and removed, a
   release freeze for one team, and a team leaving Argo CD, each handled with
-  one change and no edit to any Argo CD project
+  one change and no edit to any AppProject
 
 Allow about 90 minutes.
 
@@ -47,8 +47,8 @@ Here's what you'll install:
 | Component | Version | From | Job |
 |---|---|---|---|
 | Multi-Tenant Operator | 1.10.0 or later | Software Catalog (OperatorHub) | Owns the tenants, and runs Template Operator |
-| Red Hat OpenShift GitOps | 1.22 (Argo CD 3.5) | Software Catalog (OperatorHub) | Argo CD: deploys from Git, and enforces each project |
-| Argo CD extension for Multi-Tenant Operator | 0.7.1 | `oci://ghcr.io/stakater/charts` | Turns each tenant into an Argo CD project |
+| Red Hat OpenShift GitOps | 1.22 (Argo CD 3.5) | Software Catalog (OperatorHub) | Argo CD: deploys from Git, and enforces each AppProject |
+| Argo CD extension for Multi-Tenant Operator | 0.7.1 | `oci://ghcr.io/stakater/charts` | Turns each tenant into an AppProject |
 
 Each tenant deploys from its own Git repository. This tutorial uses two
 small public ones, so you don't need a Git account:
@@ -123,7 +123,7 @@ oc -n openshift-gitops rollout status statefulset/openshift-gitops-application-c
 ```
 
 **What just happened:** Argo CD now looks for Applications in any namespace
-whose name ends in `-argocd`. That alone grants nothing: each team's project
+whose name ends in `-argocd`. That alone grants nothing: each team's AppProject
 still decides which of those namespaces it accepts, and the extension lists
 only the team's own.
 
@@ -184,7 +184,7 @@ helm upgrade --install mto-extension-argocd \
 ```
 
 **What just happened:** the extension gave Template Operator one template:
-an Argo CD project per tenant. It acts only on tenants that opt in with an
+an AppProject per tenant. It acts only on tenants that opt in with an
 annotation, and there are none yet, so Argo CD hasn't changed.
 
 **In production,** keep the repository pattern templated on the tenant, as
@@ -222,7 +222,7 @@ oc apply -f tenants.yaml
 ```
 
 Multi-Tenant Operator creates `acme-dev`, `acme-argocd`, `globex-dev` and
-`globex-argocd`. Within moments, Argo CD has a project for each tenant:
+`globex-argocd`. Within moments, Argo CD has an AppProject for each tenant:
 
 ```bash
 oc -n openshift-gitops get appprojects
@@ -235,7 +235,7 @@ default   15m
 globex    20s
 ```
 
-Look at what `acme`'s project allows:
+Look at what `acme`'s AppProject allows:
 
 ```bash
 oc -n openshift-gitops get appproject acme -o jsonpath='
@@ -276,7 +276,7 @@ oc -n multi-tenant-operator get secret tenant-operator-console-credentials \
 account: anyone who can read Secrets in `multi-tenant-operator` can read its
 password, and it sees every tenant.
 
-In Argo CD, as an administrator, the projects are listed under **Settings →
+In Argo CD, as an administrator, the AppProjects are listed under **Settings →
 Projects**. Open Argo CD and sign in with **Log in via OpenShift**, as your
 `cluster-admin` user:
 
@@ -285,10 +285,18 @@ echo "https://$(oc -n openshift-gitops get route openshift-gitops-server -o json
 ```
 
 > 📷 **Screenshot to capture** (`04-argocd-projects.png`): Argo CD as an administrator, Settings → Projects: acme, default and globex.
-> **Highlight:** the projects `acme` and `globex`.
+> **Highlight:** the AppProjects `acme` and `globex`.
+
+**In production,** Tenants belong to the platform team: a team can't edit its
+own. On most platforms they live in Git, like the rest of the platform's
+configuration, so a team proposes a change to its tenant (a new namespace, a
+new member group, an exception) as a pull request to the platform's
+repository. The platform team reviews and merges it, and everything in this
+tutorial follows from there. Here you apply tenants with `oc`, to keep it
+short.
 
 **What just happened:** you created two tenants and didn't touch Argo CD.
-Template Operator rendered a project for each, from the tenant's namespaces
+Template Operator rendered an AppProject for each, from the tenant's namespaces
 and owners, and keeps it in step with the tenant from now on.
 
 ## Step 6: Anna deploys her team's app
@@ -350,11 +358,11 @@ NAME                     READY   STATUS    RESTARTS   AGE
 hello-6d9c8f7b5d-x2k4p   1/1     Running   0          25s
 ```
 
-In Argo CD, Anna now sees her Application, in project `acme`, and nothing
+In Argo CD, Anna now sees her Application, in AppProject `acme`, and nothing
 from any other team:
 
-> 📷 **Screenshot to capture** (`06-argocd-anna-apps.png`): Argo CD as Anna: the Application hello in project acme, Synced and Healthy.
-> **Highlight:** the Application `hello`, and its project `acme`.
+> 📷 **Screenshot to capture** (`06-argocd-anna-apps.png`): Argo CD as Anna: the Application hello in AppProject acme, Synced and Healthy.
+> **Highlight:** the Application `hello`, and its AppProject `acme`.
 
 > 📷 **Screenshot to capture** (`07-argocd-hello-synced.png`): Argo CD as Anna: the Application hello opened, its resource tree with the Deployment, ReplicaSet, Pod and Service, all healthy.
 > **Highlight:** the Synced and Healthy status.
@@ -362,7 +370,7 @@ from any other team:
 **What just happened:** Anna is in `acme-owners`, so Multi-Tenant Operator
 gave her `admin` in acme's namespaces, which is how she could create an
 Application in `acme-argocd`. Argo CD read it from there, checked it against
-project `acme` (the namespace it came from, the repository, the
+AppProject `acme` (the namespace it came from, the repository, the
 destination), and synced it. Anna never had access to `openshift-gitops`.
 
 ## Step 7: Check the boundary
@@ -374,7 +382,7 @@ Now Anna tries to cross her team's boundary, five ways.
 |---|---|
 | `wrong-destination` | deploy into globex's namespace |
 | `wrong-repository` | deploy from globex's repository |
-| `wrong-project` | use globex's project |
+| `wrong-project` | use globex's AppProject |
 | `control-plane` | deploy into Argo CD's own namespace, which would amount to Argo CD admin |
 | `own-quota` | deploy a `ResourceQuota`, raising the quota Multi-Tenant Operator sets for acme |
 
@@ -398,7 +406,7 @@ own-quota: one or more synchronization tasks are not valid: resource :ResourceQu
 Argo CD refuses all five, and deploys none of them. In the Argo CD UI, Anna
 sees why:
 
-> 📷 **Screenshot to capture** (`08-argocd-refused.png`): Argo CD as Anna: the Application wrong-destination, with the error that globex-dev isn't an allowed destination in project acme.
+> 📷 **Screenshot to capture** (`08-argocd-refused.png`): Argo CD as Anna: the Application wrong-destination, with the error that globex-dev isn't an allowed destination in AppProject acme.
 > **Highlight:** the error message.
 
 She can't go around Argo CD either: she has no access to globex's namespace
@@ -420,11 +428,11 @@ Remove the five:
 anna delete -f refused.yaml
 ```
 
-**What just happened:** Argo CD enforced acme's project, and every rule in
+**What just happened:** Argo CD enforced acme's AppProject, and every rule in
 it came from the tenant: its namespaces, its repository, its namespace for
 Applications, Argo CD's namespace left out, and the kinds Multi-Tenant
 Operator owns denied. By hand, every one of those has to be right in every
-team's project, and one mistake in one project is enough.
+team's AppProject, and one mistake in one AppProject is enough.
 
 ## Step 8: People join and leave
 
@@ -455,10 +463,10 @@ Error from server (Forbidden): applications.argoproj.io "hello" is forbidden: Us
 In a new private window, sign in to Argo CD as `carl`. He sees acme's
 Application, and Argo CD refuses to let him sync or delete it.
 
-> 📷 **Screenshot to capture** (`08b-argocd-carl-viewer.png`): Argo CD as Carl: the Application hello in project acme, with a permission error after trying to sync it.
+> 📷 **Screenshot to capture** (`08b-argocd-carl-viewer.png`): Argo CD as Carl: the Application hello in AppProject acme, with a permission error after trying to sync it.
 > **Highlight:** the Application `hello`, and the permission error.
 
-Each of the tenant's groups gets one level of access in its project, least
+Each of the tenant's groups gets one level of access in its AppProject, least
 privilege by default:
 
 | Group in the tenant | Argo CD role | Can |
@@ -492,14 +500,15 @@ oc get oauthaccesstokens -o custom-columns=NAME:.metadata.name,USER:.userName --
 
 **What just happened:** you changed one group, twice. Multi-Tenant Operator
 gave Carl, then took away, his access to acme's namespaces, and acme's
-project already named the group, so Argo CD followed. Nobody edited a
-project. By hand, every person joining or leaving means editing the roles of
-every project they touch, and remembering to undo it.
+AppProject already named the group, so Argo CD followed. Nobody edited a
+AppProject. By hand, every person joining or leaving means editing the roles of
+every AppProject they touch, and remembering to undo it.
 
 ## Step 9: The team grows
 
-`acme` needs a production namespace. Add it to the tenant, as a platform
-administrator:
+`acme` needs a production namespace. In practice the team would ask for it
+with a pull request to the platform's repository. Here you add it to the
+tenant directly, as a platform administrator:
 
 ```bash
 oc patch tenant acme --type json \
@@ -529,14 +538,15 @@ Synced Healthy
 ```
 
 **What just happened:** Multi-Tenant Operator created `acme-prod`, and
-Template Operator added it to acme's project. Nobody edited the project, and
+Template Operator added it to acme's AppProject. Nobody edited the AppProject, and
 Anna didn't have to ask.
 
 ## Step 10: A release freeze for one team
 
 acme is preparing a release and wants nothing to change in production for a
-day. That's an exception for one team. The platform administrator adds it to
-the **tenant**, not to the project:
+day. That's an exception for one team. acme asks for it with a pull request
+that adds an annotation to its tenant, and the platform team approves it. It
+goes on the **tenant**, never on the AppProject. Here you add it directly:
 
 ```bash
 oc annotate tenant acme --overwrite argocd.tenantoperator.stakater.com/sync-windows='[
@@ -566,11 +576,11 @@ oc -n openshift-gitops get appproject acme -o jsonpath='{.spec.syncWindows}{"\n"
 
 The output is empty: the window is gone.
 
-**What just happened:** the exception lives on the tenant, and the project
+**What just happened:** the exception lives on the tenant, and the AppProject
 follows it, in and out. Other per-team exceptions work the same way, as
 annotations on the tenant: an extra repository, extra kinds the team may
-deploy, or keeping its project if the tenant is ever deleted. By hand, an
-exception is an edit to one team's project that nobody remembers to undo.
+deploy, or keeping its AppProject if the tenant is ever deleted. By hand, an
+exception is an edit to one team's AppProject that nobody remembers to undo.
 
 ## Step 11: The team shrinks, and a team leaves Argo CD
 
@@ -605,19 +615,19 @@ NAME     AGE
 globex   30m
 ```
 
-The project is still there. It's released: Multi-Tenant Operator no longer
+The AppProject is still there. It's released: Multi-Tenant Operator no longer
 manages it, and nothing that globex had running was torn down with it. The
 platform team decides when to delete it.
 
-**What just happened:** removing a namespace removed it from the project,
-and taking a team out of Argo CD released its project instead of deleting
+**What just happened:** removing a namespace removed it from the AppProject,
+and taking a team out of Argo CD released its AppProject instead of deleting
 it. By hand, every removal means finding and cleaning every reference, and a
 missed one leaves access behind.
 
 ## Step 12: Hand edits are refused
 
 Someone tries to give `acme` access to globex's namespace by editing the
-project directly:
+AppProject directly:
 
 ```bash
 oc -n openshift-gitops patch appproject acme --type json \
@@ -628,8 +638,8 @@ oc -n openshift-gitops patch appproject acme --type json \
 Error from server (Forbidden): admission webhook "..." denied the request: ...
 ```
 
-**What just happened:** the project belongs to the tenant. Template Operator
-refuses changes to it that don't come from the tenant, so a project can't
+**What just happened:** the AppProject belongs to the tenant. Template Operator
+refuses changes to it that don't come from the tenant, so an AppProject can't
 quietly drift from its team. To change what a team may do, change the
 tenant.
 
@@ -642,7 +652,7 @@ Remove things in this order:
 anna delete -f acme-app.yaml
 rm anna.kubeconfig carl.kubeconfig
 
-# The tenants, then the extension. Their Argo CD projects are released,
+# The tenants, then the extension. Their AppProjects are released,
 # not deleted, so delete those last.
 oc delete -f tenants.yaml
 helm uninstall mto-extension-argocd -n multi-tenant-operator
@@ -663,7 +673,7 @@ from **Installed Operators**.
 
 ## What you built
 
-Two teams, defined once on OpenShift, each with its own Argo CD project. Each
+Two teams, defined once on OpenShift, each with its own AppProject. Each
 team deploys from its own repository into its own namespaces, from its own
 namespace for Applications, and never touches Argo CD's control plane.
 
@@ -671,13 +681,13 @@ Here's everything you did, and what it took care of:
 
 | You did | Multi-Tenant Operator did | By hand, for every team |
 |---|---|---|
-| Opted a tenant in, with one annotation | Created its Argo CD project: its namespaces, its repository, roles for its groups, its namespace for Applications | Write the project, its roles and its policies |
-| Nothing | Kept Argo CD's own namespace and the kinds Multi-Tenant Operator owns out of every project | Get both right in every project, every time |
-| Added Carl to a group, then removed him | Gave him access in Argo CD and on the cluster, then took it away | Edit the roles of every project he touches, and remember to undo it |
-| Added a namespace | Made it a destination | Edit the project |
-| Asked for a release freeze, then lifted it | Added the sync window to that team's project, then removed it | Edit one project, and remember to undo it |
-| Removed a namespace; took a team out of Argo CD | Removed the destination; released the project | Find and clean every reference |
-| Edited a project by hand | Refused it | Notice the drift, if anyone ever does |
+| Opted a tenant in, with one annotation | Created its AppProject: its namespaces, its repository, roles for its groups, its namespace for Applications | Write the AppProject, its roles and its policies |
+| Nothing | Kept Argo CD's own namespace and the kinds Multi-Tenant Operator owns out of every AppProject | Get both right in every AppProject, every time |
+| Added Carl to a group, then removed him | Gave him access in Argo CD and on the cluster, then took it away | Edit the roles of every AppProject he touches, and remember to undo it |
+| Added a namespace | Made it a destination | Edit the AppProject |
+| Asked for a release freeze, then lifted it | Added the sync window to that team's AppProject, then removed it | Edit one AppProject, and remember to undo it |
+| Removed a namespace; took a team out of Argo CD | Removed the destination; released the AppProject | Find and clean every reference |
+| Edited an AppProject by hand | Refused it | Notice the drift, if anyone ever does |
 
 The free edition stops at two tenants. When a third team arrives, that's
 where Multi-Tenant Operator Enterprise comes in.

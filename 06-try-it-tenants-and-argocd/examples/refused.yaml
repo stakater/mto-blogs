@@ -33,7 +33,7 @@ spec:
     server: https://kubernetes.default.svc
     namespace: acme-dev
 ---
-# 3. Claims another tenant's project.
+# 3. Claims another tenant's AppProject.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
