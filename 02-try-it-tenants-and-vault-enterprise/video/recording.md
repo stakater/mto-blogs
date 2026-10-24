@@ -6,9 +6,18 @@ start to finish. The footage feeds all three versions in the
 [video plan](plan.md); the voice is recorded separately, from
 [the script](narration-demo.md).
 
-The rules behind these instructions are in the
+**The pattern:** every change is recorded as a scene with a before and an
+after: the terminal on the left, the console on the right, recorded at the
+same time, so the viewer watches the console change as the command runs. The
+[recording guideline](../../docs/guidelines/recording.md) defines it; this
+page applies it to this video. The other rules are in the
 [video guideline](../../docs/guidelines/video.md) and the
 [screenshot guideline](../../docs/guidelines/screenshots.md).
+
+> **The first dry run didn't follow this pattern.** Its terminal and browser
+> clips were recorded one after the other, on a cluster that already had
+> everything installed, so the consoles never showed a "before" or a live
+> change. Those clips can't make the videos; the scenes below replace them.
 
 ## What you're building
 
@@ -17,9 +26,9 @@ while the camera runs:
 
 | Kind | What it is | Records |
 |---|---|---|
-| **Terminal tapes** | Plain text files for [VHS](https://github.com/charmbracelet/vhs): what to type, and what to wait for | The terminal parts of each chapter, as MP4 |
-| **Browser scripts** | [Playwright](https://playwright.dev) scripts: open a page, sign in, click, highlight | The console parts of each chapter, as video |
-| **`record.sh`** | Runs everything in the tutorial's order | All the clips, and a timeline of when each ran |
+| **Terminal tapes** | Plain text files for [VHS](https://github.com/charmbracelet/vhs): what to type, and what to wait for | The terminal pane of each beat, at the pane's size |
+| **Browser scripts** | [Playwright](https://playwright.dev) scripts: open the "before" page, refresh until the change appears, highlight it | The console pane of each beat, at the pane's size |
+| **`record.sh`** | Runs the beats in the tutorial's order, starting each beat's browser and tape together | The clips, and a timeline with each clip's start time |
 
 Re-recording is then one command: when the tutorial or a product changes,
 run `record.sh` again on a clean cluster.
@@ -88,6 +97,10 @@ Name every file `NN-<chapter>`, with `NN` the chapter number from the
 
 ## Terminal tapes
 
+**Pane sizes:** the settings below are for a full-screen terminal beat. For a
+split beat, the tape sets `Width 768`, `Height 1080` and `FontSize 18`, so
+the pane is recorded at its final size.
+
 Every tape starts from the shared settings:
 
 ```
@@ -142,6 +155,13 @@ Rules for every tape:
 
 ## Browser scripts
 
+**Pane sizes:** the example below records 1920×1080, for a full-screen
+console beat. For a split beat, the viewport and `recordVideo` size are
+1152×1080. And a split beat's script doesn't click through: it opens the
+"before" page, then reloads it (or clicks the console's Refresh) every 2
+seconds until the expected element appears, highlights it, and holds 3
+seconds.
+
 `browser/lib.mjs` gives every script the same browser and the same
 highlight:
 
@@ -194,39 +214,56 @@ Rules for every browser script:
 - **Convert each clip to MP4** at the end of `record.sh`:
   `ffmpeg -i clips/NN-x.webm -c:v libx264 -pix_fmt yuv420p clips/NN-x.mp4`.
 
-## Chapter by chapter
+## Scenes
 
-What each chapter records. The full description of each chapter, with what
-to show, is in the [plan](plan.md#chapters).
+One row per beat, in the tutorial's order. **Split** beats record a terminal
+tape (768×1080) and a browser script (1152×1080) at the same time.
+**Terminal** and **Console** beats record one pane at 1920×1080. The beat's
+console starts on its "before" state, already signed in, and refreshes every
+2 seconds until the change appears.
 
-| # | Chapter | Terminal tape | Browser script |
-|---|---|---|---|
-| 0 | Cold open | – | `00-cold-open`: Vault namespace picker (`acme`, `globex`), then the Multi-Tenant Operator console's Tenants page. Record after chapter 11. |
-| 2 | Step 1 | `02-install-mto`: Template Operator on; privileged namespaces; its deployment running | `02-install-mto`: Software Catalog search "multi tenant", Install, Installed Operators "Succeeded" |
-| 3 | Step 2 | `03-vault`: license Secret (hidden), Helm install, `vault-0` ready, route, `v version` | – |
-| 4 | Step 3 | `04-vco`: Helm install, rollout | – |
-| 5 | Step 4 | `05-eso-reloader`: the configuration, the webhook rollout, Reloader with its console, its four rollouts | `05-eso`: Software Catalog, External Secrets Operator for Red Hat OpenShift. `05-reloader-console`: the console open and still empty |
-| 6 | Step 5 | `06-vault-login`: the four commands; `cat` of the policy, scrolled | – |
-| 7 | Step 6 | `07-extension`: Helm install, the resources ready | – |
-| 8 | Step 7 | `08-tenants`: `tenants.yaml`, apply, `v namespace list`, Vault Config Operator resources | `08-vault-split`: the Vault namespace picker, refreshed every few seconds **while the tape runs**, until `acme` and `globex` appear. `08-consoles`: Tenant tab, the project's label, the Multi-Tenant Operator console's Tenants and Namespaces pages |
-| 9 | Step 8 | `09-app`: write the password, `checkout.yaml` shown, apply, the Secret, the log | `09-app`: the secret in Vault, its policy, the Secret's owner in the OpenShift console |
-| 10 | Step 9 | `10-rotate`: both rotations, both logs | `10-rotate`: Reloader's console with two restarts; Vault's three versions |
-| 11 | Step 10 | `11-isolation`: allowed read, both `403`s, the policy widened and put back | – |
+| Chapter | Beat | Layout | Console, and its "before" | Command | The change, highlighted |
+|---|---|---|---|---|---|
+| Step 1 | Install Multi-Tenant Operator | Console | Software Catalog, search "multi tenant" | – (Install clicked) | Installed Operators: Multi Tenant Operator "Succeeded" |
+| Step 1 | Template Operator on | Split | OpenShift console, Deployments in all projects, filtered by `template-operator`: none | the IntegrationConfig patch | `template-operator-v2`, Available |
+| Step 1 | Privileged namespaces | Terminal | – | the privileged namespaces patch | `patched` |
+| Step 2 | Vault Enterprise | Split | OpenShift console, Pods in project `vault`: none | the Helm install (license Secret hidden) | `vault-0`, Running |
+| Step 2 | Vault answers | Terminal | – | `v version` | `Vault v2.1.1+ent` |
+| Step 3 | Vault Config Operator | Split | OpenShift console, Pods in `vault-config-operator`: none | the Helm install | its pod, Running |
+| Step 4 | External Secrets Operator | Console | Software Catalog, search "external secrets" | – (Install clicked) | Installed Operators: "Succeeded" |
+| Step 4 | Its configuration | Split | OpenShift console, Pods in `external-secrets`: none | the `ExternalSecretsConfig` apply | its pods, Running |
+| Step 4 | Reloader | Split | OpenShift console, Pods in `reloader`: none | the Helm install | Reloader's four pods, Running |
+| Step 4 | Reloader's console | Console | Reloader console, Deployments | – | The empty event log: nothing restarted yet |
+| Step 5 | Kubernetes login | Split | Vault UI, root, Access → Authentication methods: `token/` only | `v auth enable kubernetes` | `kubernetes/` |
+| Step 5 | The narrow policy | Split | Vault UI, root, Policies: `default`, `root` | the `vco-admin` policy and role | `vco-admin` |
+| Step 6 | The extension | Split | OpenShift console, Search: TemplateInstances in `vault-config`: none | the Helm install | the parent TemplateInstance |
+| Step 7 | Tenants appear | Split | Multi-Tenant Operator console, Tenants: empty | `oc apply -f tenants.yaml` | Rows `acme` and `globex` |
+| Step 7 | Vault namespaces appear | Split | Vault UI, namespace picker: `root` only | `v namespace list`, repeated until it lists them | `acme`, `globex` |
+| Step 7 | Projects, by tenant | Console | Multi-Tenant Operator console, Namespaces | – | `acme-shop` under `acme`, `globex-web` under `globex` |
+| Step 7 | The tenant label | Console | OpenShift console, project `acme-shop`, Details | – | `stakater.com/tenant=acme` |
+| Step 8 | The password, in Vault | Split | Vault UI, `acme`, `kv/dev/acme-shop/checkout/`: empty | `v kv put …` | the secret `db` |
+| Step 8 | The app gets it | Split | OpenShift console, Secrets in `acme-shop`: no `checkout-db` | `oc apply -f checkout.yaml` | `checkout-db`, owned by its ExternalSecret |
+| Step 8 | The policy nobody wrote | Console | Vault UI, `acme`, ACL policies | – | `kv.acme.acme-shop.checkout` and its rule |
+| Step 8 | The app reads it | Terminal | – | `oc -n acme-shop logs deploy/checkout` | `db password has 6 characters` |
+| Step 9 | First rotation | Split | Reloader console, `checkout`: empty event log | `v kv put …`, then the forced refresh | Restart 1, caused by `checkout-db` |
+| Step 9 | Second rotation | Split | Reloader console, `checkout`: one restart | the same, with the new value (sped up) | Restart 2 |
+| Step 9 | Three versions | Console | Vault UI, `acme`, the secret's Version History | – | Versions 1, 2 and 3 |
+| Step 10 | Allowed, then refused | Terminal | – | globex's login, its own read, acme's secret, acme's role | the two `403`s |
+| Step 10 | Put back | Split | Vault UI, `acme`, policy `kv.acme.acme-shop.checkout`: the widened rule just written | the wait (sped up) | the original rule, back |
+| Cold open | The end result | Console | Vault namespace picker, then the Multi-Tenant Operator console's Tenants | – | `acme`, `globex`. Record last. |
 
-Chapters 1 and 12 are cards and a diagram, made in the edit; nothing to
-record.
-
-**The split screen in chapter 8** needs two clips recorded at the same
-time: start `08-vault-split.mjs` first, then the `08-tenants` tape, and stop
-the browser once `acme` and `globex` are on screen. `record.sh` writes both
-start times to the timeline, so the edit can line them up.
+Chapters 1 (the problem) and the close are cards, made in the edit.
 
 ## `record.sh`
 
-- Runs the chapters in order: 02 to 11, then 00.
+- Runs the beats in the scene table's order, then the cold open.
+- For a split beat: starts the browser on the "before" page, waits for it to
+  settle, records its start time, starts the tape, records its start time,
+  and stops both once the change is highlighted and held 3 seconds.
 - Stops at the first failure, saying which chapter and which command.
-- Writes `clips/timeline.csv`: chapter, clip, start time, end time. The edit
-  uses it to speed up the waits and line up the split screen.
+- Writes `clips/timeline.csv`: beat, clip, start time, end time. The edit
+  lines up each split beat's two clips by their start times, and speeds up
+  the waits.
 - Never prints a secret, and never writes one to a file under `video/`.
 
 ## Dry run: done when
@@ -237,8 +274,10 @@ start times to the timeline, so the edit can line them up.
 - [ ] No frame shows a license, password, token or client secret. Check the
   clips for chapters 3 and 8 especially.
 - [ ] Every highlight from the shot list appears in its browser clip.
-- [ ] The split screen's two clips overlap in time, with the namespaces
-  appearing while the tape runs.
+- [ ] Every split beat's two clips overlap in time, and the console shows
+  its "before" first and the change while the tape runs.
+- [ ] Each pane is recorded at its final size: 768×1080 and 1152×1080 for a
+  split, 1920×1080 otherwise.
 - [ ] `record.sh` runs start to finish without anyone touching it.
 
 ## Report back
