@@ -184,8 +184,10 @@ teams usually can't create their own Applications, and the platform team
 does it for them.
 
 Argo CD can also read Applications from other namespaces, and the extension
-uses that. Each tenant gets its own namespace for Applications, such as
-`acme-argocd`, and only that tenant's project accepts them. The team creates,
+uses that. Each tenant declares a namespace for its Applications in its
+`Tenant`, such as `acme-argocd`, like any of its other namespaces. Multi-Tenant
+Operator creates it, and the extension makes it the only place that tenant's
+project accepts Applications from. The team creates,
 changes and deletes its own Applications there with the access Multi-Tenant
 Operator already gives it, and never needs write access to Argo CD's own
 namespace.
