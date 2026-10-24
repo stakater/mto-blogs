@@ -1,5 +1,6 @@
 # Two tenants, opted in to Argo CD with one annotation each: the Basic
-# edition's limit, and enough to see isolation. Each gets a namespace for its
+# edition's limit, and enough to see isolation. Each names an owners group and
+# a viewers group; who is in them is managed outside the tenant. Each gets a namespace for its
 # workloads (<tenant>-dev) and one for its Argo CD Applications
 # (<tenant>-argocd).
 #
@@ -24,6 +25,8 @@ spec:
   accessControl:
     owners:
       groups: [acme-owners]
+    viewers:
+      groups: [acme-viewers]
   namespaces:
     withTenantPrefix:
       - dev
@@ -40,6 +43,8 @@ spec:
   accessControl:
     owners:
       groups: [globex-owners]
+    viewers:
+      groups: [globex-viewers]
   namespaces:
     withTenantPrefix:
       - dev

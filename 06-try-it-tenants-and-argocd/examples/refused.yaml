@@ -1,4 +1,4 @@
-# Three Applications that Argo CD must refuse, each crossing the boundary of
+# Five Applications that Argo CD must refuse, each crossing the boundary of
 # tenant acme in a different way.
 
 # 1. Deploys into another tenant's namespace.
@@ -48,3 +48,38 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: globex-dev
+---
+# 4. Deploys into Argo CD's own namespace, which would amount to Argo CD admin.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: control-plane
+  namespace: acme-argocd
+spec:
+  project: acme
+  source:
+    repoURL: https://github.com/stakater/mto-blogs-acme-gitops
+    targetRevision: main
+    path: .
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: openshift-gitops
+---
+# 5. Deploys a ResourceQuota, a kind Multi-Tenant Operator owns: the team
+# would raise its own quota.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: own-quota
+  namespace: acme-argocd
+spec:
+  project: acme
+  source:
+    repoURL: https://github.com/stakater/mto-blogs-acme-gitops
+    targetRevision: main
+    path: quota
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: acme-dev
+  syncPolicy:
+    automated: {}

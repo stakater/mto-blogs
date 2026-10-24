@@ -17,7 +17,9 @@ steps do. Each file replaces the slot that names it in [post.md](../post.md).
 | `06-argocd-anna-apps.png` | 6 | Argo CD as Anna: the Application `hello` in project `acme`, Synced and Healthy | The Application `hello`, and its project `acme` | To capture |
 | `07-argocd-hello-synced.png` | 6 | Argo CD as Anna: `hello` opened, its resource tree healthy | The Synced and Healthy status | To capture |
 | `08-argocd-refused.png` | 7 | Argo CD as Anna: `wrong-destination`, with the error that `globex-dev` isn't an allowed destination | The error message | To capture |
-| `09-argocd-project-destinations.png` | 8 | Argo CD as an administrator, project `acme`: destinations `acme-argocd`, `acme-dev`, `acme-prod` | The destination `acme-prod` | To capture |
+| `08b-argocd-carl-viewer.png` | 8 | Argo CD as Carl, a viewer: `hello` in project `acme`, with a permission error after trying to sync it | The Application `hello`, and the permission error | To capture |
+| `09-argocd-project-destinations.png` | 9 | Argo CD as an administrator, project `acme`: destinations `acme-argocd`, `acme-dev`, `acme-prod` | The destination `acme-prod` | To capture |
+| `10-argocd-sync-window.png` | 10 | Argo CD as Anna: `hello-prod`, its sync blocked by the "Release freeze" sync window | The sync window and its message | To capture |
 
 02 and 03 are required: they are the only screenshots of Multi-Tenant
 Operator's own console. 06 and 08 are also used in the explainer,

@@ -19,11 +19,13 @@ By the end you'll have:
 - Anna, on the `acme` team, deploying her team's app by GitOps, on her own,
   without access to Argo CD's control plane
 - proof that Argo CD refuses anything outside her team's boundary: another
-  team's namespace, another team's repository, another team's project
-- a new namespace for the team that becomes a destination on its own, and a
-  hand edit to a project that's refused
+  team's namespace, repository or project, Argo CD's own namespace, and the
+  quota Multi-Tenant Operator sets
+- people joining and leaving a team, a namespace added and removed, a
+  release freeze for one team, and a team leaving Argo CD, each handled with
+  one change and no edit to any Argo CD project
 
-Allow about an hour.
+Allow about 90 minutes.
 
 ## Before you start
 
@@ -125,16 +127,19 @@ whose name ends in `-argocd`. That alone grants nothing: each team's project
 still decides which of those namespaces it accepts, and the extension lists
 only the team's own.
 
-## Step 3: Add two people
+## Step 3: Add three people
 
-Anna works on `acme`, and Ben on `globex`. Create them as OpenShift users,
-with a password file, and put each in their team's group:
+Anna owns `acme`, and Ben owns `globex`. Carl isn't on a team yet; he joins
+one in step 8. Create all three as OpenShift users, with a password file, and
+create each team's groups: one for owners, one for viewers.
 
 ```bash
 ANNA_PASSWORD=$(openssl rand -hex 8)
 BEN_PASSWORD=$(openssl rand -hex 8)
+CARL_PASSWORD=$(openssl rand -hex 8)
 htpasswd -c -B -b users.htpasswd anna "$ANNA_PASSWORD"
 htpasswd -B -b users.htpasswd ben "$BEN_PASSWORD"
+htpasswd -B -b users.htpasswd carl "$CARL_PASSWORD"
 oc -n openshift-config create secret generic tutorial-users --from-file=htpasswd=users.htpasswd
 rm users.htpasswd
 
@@ -148,12 +153,14 @@ sleep 30
 oc wait clusteroperator authentication --for=condition=Progressing=False --timeout=600s
 
 oc adm groups new acme-owners anna
+oc adm groups new acme-viewers
 oc adm groups new globex-owners ben
+oc adm groups new globex-viewers
 
-echo "anna: $ANNA_PASSWORD   ben: $BEN_PASSWORD"
+echo "anna: $ANNA_PASSWORD   ben: $BEN_PASSWORD   carl: $CARL_PASSWORD"
 ```
 
-Note both passwords. You'll sign in as Anna in step 6.
+Note the passwords. You'll sign in as Anna in step 6, and as Carl in step 8.
 
 **In production,** people and groups come from your identity provider, not a
 password file. The
@@ -187,8 +194,8 @@ other team's code.
 ## Step 5: Create two tenants
 
 [`tenants.yaml`](examples/tenants.yaml) defines two teams. Each opts in to
-Argo CD with one annotation, names its owners' group, and gets two
-namespaces: one for its workloads, and one for its Argo CD Applications.
+Argo CD with one annotation, names its owners' and viewers' groups, and gets
+two namespaces: one for its workloads, and one for its Argo CD Applications.
 
 ```yaml
 apiVersion: tenantoperator.stakater.com/v1beta3
@@ -202,6 +209,8 @@ spec:
   accessControl:
     owners:
       groups: [acme-owners]
+    viewers:
+      groups: [acme-viewers]
   namespaces:
     withTenantPrefix:
       - dev
@@ -358,16 +367,23 @@ destination), and synced it. Anna never had access to `openshift-gitops`.
 
 ## Step 7: Check the boundary
 
-Now Anna tries to cross her team's boundary, three ways.
-[`refused.yaml`](examples/refused.yaml) holds three Applications: one
-deploying into globex's namespace, one deploying from globex's repository,
-and one claiming globex's project.
+Now Anna tries to cross her team's boundary, five ways.
+[`refused.yaml`](examples/refused.yaml) holds five Applications:
+
+| Application | Tries to |
+|---|---|
+| `wrong-destination` | deploy into globex's namespace |
+| `wrong-repository` | deploy from globex's repository |
+| `wrong-project` | use globex's project |
+| `control-plane` | deploy into Argo CD's own namespace, which would amount to Argo CD admin |
+| `own-quota` | deploy a `ResourceQuota`, raising the quota Multi-Tenant Operator sets for acme |
 
 ```bash
 anna apply -f refused.yaml
-sleep 15
-for a in wrong-destination wrong-repository wrong-project; do
-  echo "$a: $(anna -n acme-argocd get application $a -o jsonpath='{.status.conditions[0].message}')"
+sleep 30
+for a in wrong-destination wrong-repository wrong-project control-plane own-quota; do
+  echo "$a: $(anna -n acme-argocd get application $a \
+    -o jsonpath='{.status.conditions[0].message}{.status.operationState.message}')"
 done
 ```
 
@@ -375,10 +391,12 @@ done
 wrong-destination: application destination server 'https://kubernetes.default.svc' and namespace 'globex-dev' do not match any of the allowed destinations in project 'acme'
 wrong-repository: application repo https://github.com/stakater/mto-blogs-globex-gitops is not permitted in project 'acme'
 wrong-project: app is not allowed in project "globex", or the project does not exist
+control-plane: application destination server 'https://kubernetes.default.svc' and namespace 'openshift-gitops' do not match any of the allowed destinations in project 'acme'
+own-quota: one or more synchronization tasks are not valid: resource :ResourceQuota is not permitted in project acme
 ```
 
-Argo CD refuses all three, and deploys nothing. In the Argo CD UI, Anna sees
-why:
+Argo CD refuses all five, and deploys none of them. In the Argo CD UI, Anna
+sees why:
 
 > 📷 **Screenshot to capture** (`08-argocd-refused.png`): Argo CD as Anna: the Application wrong-destination, with the error that globex-dev isn't an allowed destination in project acme.
 > **Highlight:** the error message.
@@ -396,13 +414,89 @@ no
 no
 ```
 
-Remove the three:
+Remove the five:
 
 ```bash
 anna delete -f refused.yaml
 ```
 
-## Step 8: The team grows
+**What just happened:** Argo CD enforced acme's project, and every rule in
+it came from the tenant: its namespaces, its repository, its namespace for
+Applications, Argo CD's namespace left out, and the kinds Multi-Tenant
+Operator owns denied. By hand, every one of those has to be right in every
+team's project, and one mistake in one project is enough.
+
+## Step 8: People join and leave
+
+Carl joins acme, to keep an eye on its releases. He needs to see the team's
+applications, not change them. Add him to acme's viewers group, and nothing
+else:
+
+```bash
+oc adm groups add-users acme-viewers carl
+```
+
+Give Carl a login, and see what he can do:
+
+```bash
+oc login "$API" -u carl -p "$CARL_PASSWORD" --kubeconfig carl.kubeconfig
+carl() { oc --kubeconfig carl.kubeconfig "$@"; }
+
+carl -n acme-argocd get applications
+carl -n acme-argocd delete application hello
+```
+
+```
+NAME    SYNC STATUS   HEALTH STATUS
+hello   Synced        Healthy
+Error from server (Forbidden): applications.argoproj.io "hello" is forbidden: User "carl" cannot delete resource "applications" in API group "argoproj.io" in the namespace "acme-argocd"
+```
+
+In a new private window, sign in to Argo CD as `carl`. He sees acme's
+Application, and Argo CD refuses to let him sync or delete it.
+
+> 📷 **Screenshot to capture** (`08b-argocd-carl-viewer.png`): Argo CD as Carl: the Application hello in project acme, with a permission error after trying to sync it.
+> **Highlight:** the Application `hello`, and the permission error.
+
+Each of the tenant's groups gets one level of access in its project, least
+privilege by default:
+
+| Group in the tenant | Argo CD role | Can |
+|---|---|---|
+| owners | `acme-owner` | Create, change, sync and delete the team's Applications |
+| editors | `acme-edit` | Sync and update Applications, but not create, delete or override them |
+| viewers | `acme-view` | Look, and nothing else |
+
+No role gets Argo CD's web terminal or can register a cluster, unless the
+platform team switches that on.
+
+Now Carl moves on. Take him out of the group:
+
+```bash
+oc adm groups remove-users acme-viewers carl
+carl -n acme-argocd get applications
+```
+
+```
+Error from server (Forbidden): applications.argoproj.io is forbidden: User "carl" cannot list resource "applications" in API group "argoproj.io" in the namespace "acme-argocd"
+```
+
+Argo CD reads Carl's groups when he signs in, so the next time he does, acme
+is gone. To end a session straight away, as a leaver process would, delete
+his OpenShift sessions:
+
+```bash
+oc get oauthaccesstokens -o custom-columns=NAME:.metadata.name,USER:.userName --no-headers \
+  | awk '$2=="carl" {print $1}' | xargs -r oc delete oauthaccesstokens
+```
+
+**What just happened:** you changed one group, twice. Multi-Tenant Operator
+gave Carl, then took away, his access to acme's namespaces, and acme's
+project already named the group, so Argo CD followed. Nobody edited a
+project. By hand, every person joining or leaving means editing the roles of
+every project they touch, and remembering to undo it.
+
+## Step 9: The team grows
 
 `acme` needs a production namespace. Add it to the tenant, as a platform
 administrator:
@@ -421,11 +515,106 @@ acme-argocd acme-dev acme-prod
 > 📷 **Screenshot to capture** (`09-argocd-project-destinations.png`): Argo CD as an administrator, Settings → Projects → acme: the destinations acme-argocd, acme-dev and acme-prod.
 > **Highlight:** the destination `acme-prod`.
 
-**What just happened:** Multi-Tenant Operator created `acme-prod`, and
-Template Operator added it to acme's project. Anna can deploy there now, and
-nobody edited the project.
+Anna deploys to production straight away, with
+[`acme-prod-app.yaml`](examples/acme-prod-app.yaml):
 
-## Step 9: Hand edits are refused
+```bash
+anna apply -f acme-prod-app.yaml
+sleep 30
+anna -n acme-argocd get application hello-prod -o jsonpath='{.status.sync.status} {.status.health.status}{"\n"}'
+```
+
+```
+Synced Healthy
+```
+
+**What just happened:** Multi-Tenant Operator created `acme-prod`, and
+Template Operator added it to acme's project. Nobody edited the project, and
+Anna didn't have to ask.
+
+## Step 10: A release freeze for one team
+
+acme is preparing a release and wants nothing to change in production for a
+day. That's an exception for one team. The platform administrator adds it to
+the **tenant**, not to the project:
+
+```bash
+oc annotate tenant acme --overwrite argocd.tenantoperator.stakater.com/sync-windows='[
+  {"kind": "deny", "schedule": "0 0 * * *", "duration": "24h",
+   "namespaces": ["acme-prod"], "description": "Release freeze"}]'
+sleep 20
+oc -n openshift-gitops get appproject acme -o jsonpath='{.spec.syncWindows[*].description}{"\n"}'
+```
+
+```
+Release freeze
+```
+
+In Argo CD, Anna tries to sync `hello-prod`, and the freeze blocks it.
+`hello`, in `acme-dev`, still syncs as usual.
+
+> 📷 **Screenshot to capture** (`10-argocd-sync-window.png`): Argo CD as Anna: hello-prod, with its sync blocked by the "Release freeze" sync window.
+> **Highlight:** the sync window and its message.
+
+The release is out. Lift the freeze:
+
+```bash
+oc annotate tenant acme argocd.tenantoperator.stakater.com/sync-windows-
+sleep 20
+oc -n openshift-gitops get appproject acme -o jsonpath='{.spec.syncWindows}{"\n"}'
+```
+
+The output is empty: the window is gone.
+
+**What just happened:** the exception lives on the tenant, and the project
+follows it, in and out. Other per-team exceptions work the same way, as
+annotations on the tenant: an extra repository, extra kinds the team may
+deploy, or keeping its project if the tenant is ever deleted. By hand, an
+exception is an edit to one team's project that nobody remembers to undo.
+
+## Step 11: The team shrinks, and a team leaves Argo CD
+
+acme no longer needs `acme-prod`. Remove its Application, then the namespace
+from the tenant:
+
+```bash
+anna delete -f acme-prod-app.yaml
+oc patch tenant acme --type json \
+  -p '[{"op":"remove","path":"/spec/namespaces/withTenantPrefix/2"}]'
+sleep 20
+oc -n openshift-gitops get appproject acme -o jsonpath='{.spec.destinations[*].namespace}{"\n"}'
+```
+
+```
+acme-argocd acme-dev
+```
+
+`acme-prod` is no longer a destination: nothing can deploy there through
+Argo CD any more.
+
+Now `globex` stops using Argo CD. Take the annotation off its tenant:
+
+```bash
+oc annotate tenant globex argocd.tenantoperator.stakater.com/enabled-
+sleep 20
+oc -n openshift-gitops get appproject globex
+```
+
+```
+NAME     AGE
+globex   30m
+```
+
+The project is still there. It's released: Multi-Tenant Operator no longer
+manages it, and nothing that globex had running was torn down with it. The
+platform team decides when to delete it.
+
+**What just happened:** removing a namespace removed it from the project,
+and taking a team out of Argo CD released its project instead of deleting
+it. By hand, every removal means finding and cleaning every reference, and a
+missed one leaves access behind.
+
+## Step 12: Hand edits are refused
 
 Someone tries to give `acme` access to globex's namespace by editing the
 project directly:
@@ -449,9 +638,9 @@ tenant.
 Remove things in this order:
 
 ```bash
-# Anna's Application, and her login
+# Anna's Application, and the logins
 anna delete -f acme-app.yaml
-rm anna.kubeconfig
+rm anna.kubeconfig carl.kubeconfig
 
 # The tenants, then the extension. Their Argo CD projects are released,
 # not deleted, so delete those last.
@@ -459,10 +648,10 @@ oc delete -f tenants.yaml
 helm uninstall mto-extension-argocd -n multi-tenant-operator
 oc -n openshift-gitops delete appproject acme globex
 
-# The two people
-oc delete group acme-owners globex-owners
-oc delete user anna ben
-oc delete identity tutorial:anna tutorial:ben
+# The three people
+oc delete group acme-owners acme-viewers globex-owners globex-viewers
+oc delete user anna ben carl
+oc delete identity tutorial:anna tutorial:ben tutorial:carl
 IDX=$(( $(oc get oauth cluster -o jsonpath='{range .spec.identityProviders[*]}{.name}{"\n"}{end}' \
   | grep -n -x tutorial | cut -d: -f1) - 1 ))
 oc patch oauth cluster --type json -p "[{\"op\":\"remove\",\"path\":\"/spec/identityProviders/$IDX\"}]"
@@ -474,11 +663,21 @@ from **Installed Operators**.
 
 ## What you built
 
-Two teams, defined once on OpenShift, each with its own Argo CD project.
-Each team deploys from its own repository into its own namespaces, from its
-own namespace for Applications, and never touches Argo CD's control plane.
-The projects follow the teams: a new namespace became a destination on its
-own, and a hand edit was refused.
+Two teams, defined once on OpenShift, each with its own Argo CD project. Each
+team deploys from its own repository into its own namespaces, from its own
+namespace for Applications, and never touches Argo CD's control plane.
+
+Here's everything you did, and what it took care of:
+
+| You did | Multi-Tenant Operator did | By hand, for every team |
+|---|---|---|
+| Opted a tenant in, with one annotation | Created its Argo CD project: its namespaces, its repository, roles for its groups, its namespace for Applications | Write the project, its roles and its policies |
+| Nothing | Kept Argo CD's own namespace and the kinds Multi-Tenant Operator owns out of every project | Get both right in every project, every time |
+| Added Carl to a group, then removed him | Gave him access in Argo CD and on the cluster, then took it away | Edit the roles of every project he touches, and remember to undo it |
+| Added a namespace | Made it a destination | Edit the project |
+| Asked for a release freeze, then lifted it | Added the sync window to that team's project, then removed it | Edit one project, and remember to undo it |
+| Removed a namespace; took a team out of Argo CD | Removed the destination; released the project | Find and clean every reference |
+| Edited a project by hand | Refused it | Notice the drift, if anyone ever does |
 
 The free edition stops at two tenants. When a third team arrives, that's
 where Multi-Tenant Operator Enterprise comes in.

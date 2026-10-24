@@ -90,10 +90,15 @@ That's one team, on day one. Then it has to be **kept** right:
 
 - The team adds `acme-test`. Until someone edits the project, the team can't
   deploy there.
-- The team moves to a new repository. The project still points at the old
-  one.
-- The team is split, merged or retired. Its project, its roles and its
-  groups all need changing, in a file nobody on the team can edit.
+- Someone joins, moves or leaves. Their access has to change in every
+  project they touch, and be undone later.
+- The team needs an exception, such as a release freeze in production. Someone
+  edits that one project by hand, and nobody remembers to undo it.
+- A namespace is retired, or the team stops using Argo CD. Every reference
+  has to go, or access is left behind.
+- And every project must keep Argo CD's own namespace out, and keep teams from
+  deploying what the platform owns, such as their own quotas. Get it wrong in
+  one project, and that team has more power than it should.
 
 Multiply that by forty teams. Platform teams end up in one of three places:
 
@@ -139,7 +144,11 @@ kept in step with it:
 | List the team's namespaces as destinations | The tenant's namespaces, always; a new namespace becomes a destination on its own |
 | List the team's repositories | From one pattern for every tenant, such as `https://github.com/acme-org/{{ tenant }}-gitops` |
 | Write a role and policy per access level | Owner, edit and view roles, least privilege, bound to the tenant's owners, editors and viewers |
+| Change roles when people join, move or leave | Nothing to change: the roles name the tenant's groups, so a group change is enough |
 | Keep Argo CD's own namespace out of reach | Never a destination, for any tenant |
+| Keep teams from deploying what the platform owns | Kinds such as `ResourceQuota` denied in every project |
+| Hand-edit one team's project for an exception | An annotation on that team's tenant: a sync window, an extra repository, extra kinds. Removed the same way. |
+| Clean up when a namespace or a team goes | The destination is removed; a team leaving Argo CD has its project released, not deleted |
 | Keep it all right as the team changes | Re-rendered on every change to the tenant or its namespaces. A hand edit is refused. |
 
 Nobody writes or edits an AppProject.
@@ -246,12 +255,13 @@ still beta in Argo CD, and is off by default.
 
 Multi-Tenant Operator's Basic edition is free with no expiry, and manages up
 to two tenants. That's enough to see two teams on one Argo CD, each deploying
-on its own and refused in the other's space.
+on its own and refused in the other's space, and to watch people, namespaces,
+exceptions and a team leaving, all handled without editing a project.
 
 The companion tutorial,
 [Hands-on: tenants on OpenShift, carried into Argo CD](https://github.com/stakater/mto-blogs/tree/main/06-try-it-tenants-and-argocd),
 takes you from an OpenShift cluster to two teams deploying with Argo CD,
-each inside its own project, in about an hour.
+each inside its own project, in about 90 minutes.
 
 ## What's next
 
