@@ -73,7 +73,8 @@ Grafana extension runs today; others follow.
 
 ## Open decisions
 
-- **"Extension" or "integration".** The posts say "the Vault Enterprise
-  extension for Multi-Tenant Operator"; Multi-Tenant Operator now handles all
-  of these as integrations. Decide the term, then rename across all posts and
-  guidelines in one pass.
+None open. Decided:
+
+- **"Extension", not "integration"** (2026-10-25). The posts say "the Vault
+  Enterprise extension for Multi-Tenant Operator", and keep doing so; see
+  [CLAUDE.md](../CLAUDE.md).
