@@ -78,6 +78,10 @@ topic says why it is separate from the one before.
 | 3 | Tenants and Vault Community: a different isolation model | – | – | – | Idea |
 | 4 | The same tenant in more tools: Argo CD, Grafana and others | – | – | – | Idea; extensions run today |
 
+Topics not started yet, with what's open and what must happen before
+writing, are tracked in the [backlog](backlog.md), including tenants across
+several clusters.
+
 Before starting a topic, check its extension is ready: what the tutorial
 shows must already work, and be covered by the extension's tests.
 
