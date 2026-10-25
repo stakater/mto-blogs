@@ -30,9 +30,10 @@ platform engineer working through a queue of tickets.
 
 This article shows a different approach. You define each team once, on the
 cluster, as a **tenant**. That one boundary is then carried into Vault
-automatically. Every tenant gets its own Vault namespace, every app asks for
-its secrets with an annotation, and the Vault configuration keeps up as
-teams change.
+automatically. Every tenant gets its own Vault namespace. Its apps ask for
+their secrets with an annotation, and its people sign in with their company
+accounts, each seeing only their own team's secrets. And the Vault
+configuration keeps up as teams change.
 
 The tenant comes from **Multi-Tenant Operator**, a Red Hat certified
 operator from Stakater. It's a commercial product, with a free Basic edition
@@ -45,8 +46,8 @@ Community of Practice, External Secrets Operator and Reloader.
 - what onboarding a single team into Vault Enterprise takes today, and
   where that breaks down
 - the tenant: a team as a first-class object on OpenShift
-- how one tenant becomes one Vault namespace, and what's automated along
-  the way
+- how one tenant becomes one Vault namespace, with access for its apps and
+  its people, and what's automated along the way
 - how the pieces fit together
 - the guardrails Vault owners will ask about
 
@@ -163,6 +164,14 @@ step from the previous section is taken over, and kept up to date:
 | Wire up a `SecretStore` and an `ExternalSecret` per app | Generated from one annotation on the Deployment |
 | Keep it all right as teams change | An access level change rewrites the policy. A removed annotation removes the grant. A removed tenant loses its access, and keeps its data. A hand edit in Vault is put back. |
 
+**People get access too, not just apps.** Every tenant's Vault namespace
+gets a single sign-on login for people, with four access levels: viewer,
+editor, admin and audit-read. Each level maps to a group in your identity
+provider, named by one pattern, such as `acme-editors`. So joining, moving or
+leaving a team is a group change in the identity provider, and Vault
+follows, with nobody writing a Vault role. You'll see each level
+[further down](#what-people-see).
+
 When you add a tenant, a new Vault namespace appears. When you add a project
 to a tenant, its workloads can use that tenant's Vault namespace, and no
 other. Nobody runs a Vault command for any of it.
@@ -170,7 +179,14 @@ other. Nobody runs a Vault command for any of it.
 ## How it works
 
 No new controller writes to Vault. Multi-Tenant Operator, and the Template
-Operator it ships, own the tenants. Open source projects do the rest:
+Operator it ships, own the tenants. Open source projects do the rest.
+
+**Template Operator** ships with Multi-Tenant Operator. It renders a set of
+Kubernetes resources for every tenant from one template, and keeps them in
+step as tenants change. Here, that set is the tenant's Vault configuration.
+See the
+[Template Operator documentation](https://docs.stakater.com/template-operator-v2/).
+
 
 | Component | Role |
 |---|---|
@@ -348,12 +364,18 @@ PKI comes first: Vault Config Operator already manages PKI engines and
 roles, so each tenant can get its own certificate authority the same way it
 gets its own KV engine.
 
+This article and its tutorial use one cluster. Many platforms run several
+OpenShift clusters against one Vault; how tenants work across clusters is a
+topic for a later article in this series.
+
 ## What's next
 
 This post and its tutorial focus on apps: how a workload gets its secrets,
-and how tenants stay apart. You've seen what each access level looks like
-in Vault. The other half is setting up that sign-in for people, once, so
-that Anna sees only `acme` in the OpenShift console and in Vault alike.
+and how tenants stay apart. The extension already gives each tenant's people
+their sign-in to Vault, and you've seen what each access level looks like.
+What's left is connecting your identity provider once, for OpenShift and
+Vault together, so that Anna sees only `acme` in the OpenShift console and
+in Vault alike.
 
 That half gets its own pair of posts, because it brings in pieces this one
 doesn't need: an identity provider with groups, and a change to how
