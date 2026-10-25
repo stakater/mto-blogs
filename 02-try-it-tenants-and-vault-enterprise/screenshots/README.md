@@ -49,3 +49,9 @@ Notes from the capture:
   empty timestamp for the reload. Re-capture once that is fixed.
 - **08b and 13** outline whole table rows; the table's edges cut the sides of
   those outlines, so they show as lines above and below the row.
+
+**Not from this tutorial's run:** `sso-editor-view.png` and
+`sso-viewer-view.png`, in the optional single sign-on section, come from the
+Vault Enterprise extension's end-to-end tests (the same images as
+[post 1](../../01-tenants-and-vault-enterprise/screenshots/)). The post says
+so. Post 4 captures people signing in during its own run.
