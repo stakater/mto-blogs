@@ -183,10 +183,9 @@ Operator it ships, own the tenants. Open source projects do the rest.
 
 **Template Operator** ships with Multi-Tenant Operator. It renders a set of
 Kubernetes resources for every tenant from one template, and keeps them in
-step as tenants change. Each Multi-Tenant Operator extension is such a
-template; here, the set is the tenant's Vault configuration. See the
-[Template Operator documentation](https://docs.stakater.com/template-operator-v2/)
-and [how extensions use it](https://docs.stakater.com/mto/latest/concepts/extensions.html).
+step as tenants change. Here, that set is the tenant's Vault configuration.
+See the
+[Template Operator documentation](https://docs.stakater.com/template-operator-v2/).
 
 
 | Component | Role |
