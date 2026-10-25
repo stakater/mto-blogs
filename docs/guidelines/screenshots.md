@@ -94,7 +94,13 @@ The highlight tells the reader where to look.
   outline around the element, 3 px, Stakater orange `#EA7845`, 4 px from the
   element, with rounded corners. Nothing is drawn afterwards in an image
   editor, so every re-capture comes out the same.
-- **At most three highlights,** and no arrows, labels or blurring.
+- **At most three highlights,** and no arrows or blurring.
+- **A label only for a comparison.** When two screenshots differ by one
+  thing, such as an editor's and a viewer's view, each may carry one short
+  label next to its highlight, saying the difference in a few words:
+  "Editor: can create a new version". White bold text on a Stakater orange
+  pill, on the same line as the highlight, and drawn in the page like the
+  highlight. Never on a screenshot that isn't part of a comparison.
 - **The highlighted element is in view,** scrolled to if needed, not hidden
   behind a menu.
 

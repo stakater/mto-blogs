@@ -55,5 +55,5 @@ Notes from the capture:
 Vault Enterprise extension's end-to-end tests (the same images as
 [post 1](../../01-tenants-and-vault-enterprise/screenshots/)). The post says
 so. Their highlights (the editor's "Create new version" button, and the
-viewer's toolbar without it) were drawn onto the images, since they can't
-be re-captured in this tutorial's run.
+viewer's toolbar without it) and their comparison labels were drawn onto
+the images, since they can't be re-captured in this tutorial's run.
