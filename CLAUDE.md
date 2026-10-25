@@ -70,6 +70,8 @@ its highlight, before anything is captured.
 ## Style
 
 - "Multi-Tenant Operator" in full, never "MTO".
+- Call the per-tool add-ons **extensions**, such as "the Vault Enterprise
+  extension for Multi-Tenant Operator". Never "integrations".
 - "Tenant" is the team boundary. Always write "Vault namespace" in full, so
   it is never confused with a Kubernetes namespace.
 - No comparisons with competitors, and no "replace". Red Hat and HashiCorp

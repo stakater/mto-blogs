@@ -56,6 +56,7 @@ would double it and mix two questions. Each post says so where it ends.
   [tutorial](docs/guidelines/tutorial.md),
   [screenshots](docs/guidelines/screenshots.md), [video](docs/guidelines/video.md)
 - [Templates](docs/templates/): where every new piece starts
+- [Backlog](docs/backlog.md): topics not started yet, and open decisions
 - [CLAUDE.md](CLAUDE.md): the rules every piece follows
 
 ## Workflow
