@@ -79,6 +79,9 @@ its highlight, before anything is captured.
 - Leave out insider backstory: version numbers, field names, pull requests,
   who fixed what. Include a detail only if the reader needs it to decide or
   to act. Tutorials state required versions as prerequisites, nothing more.
+- **Link only to articles already published.** A post that comes later in
+  the series is "covered in a later article in this series", never a link:
+  an unpublished link is broken for readers, and Red Hat won't publish it.
 - One voice per post. Placeholders must be visible text (`[role]`), never
   HTML comments, which render as nothing.
 - Topics come in pairs: an explainer (why, for the people deciding) and a

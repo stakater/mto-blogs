@@ -158,8 +158,13 @@ The image is the Red Hat certified build of Vault Enterprise, from
 covers. Write the registry out in full: OpenShift maps the short name
 `hashicorp/vault-enterprise` to that registry, where the tags end in `-ubi`.
 
-Define two shell helpers that run the `vault` CLI inside the pod. `v` uses
-the root token. `vt` uses a token you pass in, so you can act as an app:
+Define two shell helpers, so you don't need the `vault` CLI on your machine.
+You'll use them in every step from here on:
+
+- **`v` is short for `vault`.** It runs the `vault` command inside the Vault
+  pod, with the root token, so `v version` means `vault version`.
+- **`vt` does the same with a token you pass in,** so you can act as an app,
+  with only that app's access.
 
 ```bash
 v()  { oc -n vault exec -i vault-0 -- env VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=root vault "$@"; }
@@ -280,7 +285,8 @@ put it behind your cluster's authentication.
 
 Vault Config Operator logs in to Vault **once**, in the root namespace, with
 Vault's Kubernetes auth method. From there it writes into each tenant's
-Vault namespace. A Vault admin sets this up one time:
+Vault namespace. A Vault admin sets this up one time. (As in every step,
+`v` is the `vault` command, run inside the Vault pod; see step 2.)
 
 ```bash
 v auth enable kubernetes
@@ -398,7 +404,8 @@ The **Namespaces** page shows which projects belong to which tenant:
 
 ![The Multi-Tenant Operator console, Namespaces page, listing acme-shop under tenant acme and globex-web under tenant globex](screenshots/08b-mto-console-namespaces.png)
 
-Within a minute, each tenant has its own Vault namespace:
+Within a minute, each tenant has its own Vault namespace. Ask Vault, with
+the `v` helper from step 2:
 
 ```bash
 v namespace list
@@ -569,7 +576,8 @@ In the Vault UI, the secret now has three versions:
 ## Step 10: Check the isolation
 
 Now prove the boundary holds. Give tenant `globex` an app, and log in to
-Vault as that app, with its own ServiceAccount token:
+Vault as that app, with its own ServiceAccount token. Then use the `vt`
+helper from step 2 to act with that app's token, and nothing more:
 
 ```bash
 oc apply -f web.yaml
@@ -658,6 +666,24 @@ VAULT_NAMESPACE=acme vault login -method=oidc -path=oidc/sso role=sso.acme.edito
 By default the login accepts only the Vault CLI's local callback. For
 sign-in through the Vault UI, also set `parent.sso.allowedRedirectUris` to
 your Vault UI's callback URL.
+
+### What people see
+
+Each person sees their team's secrets, with what their access level allows.
+Look at the top right of each screen. An editor sees an app's secret, and
+the **Create new version** button to change it:
+
+![The Vault UI for a member of acme-editors: the secret db, with the Create new version button](screenshots/sso-editor-view.png)
+
+A viewer sees the same secret, but the button isn't there: only **Copy**
+and **Version 1**. A viewer can read, and can't change anything:
+
+![The Vault UI for a member of acme-viewers: the same secret, without Create new version](screenshots/sso-viewer-view.png)
+
+These two views come from the extension's own tests, not from this
+tutorial's run, which signs no people in. Signing people in end to end,
+with one account for OpenShift and Vault and each person seeing only their
+own team, is covered in a later article in this series.
 
 ## Clean up
 
