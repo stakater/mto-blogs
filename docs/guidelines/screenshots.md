@@ -97,10 +97,12 @@ The highlight tells the reader where to look.
 - **At most three highlights,** and no arrows or blurring.
 - **A label only for a comparison.** When two screenshots differ by one
   thing, such as an editor's and a viewer's view, each may carry one short
-  label next to its highlight, saying the difference in a few words:
-  "Editor: can create a new version". White bold text on a Stakater orange
-  pill, on the same line as the highlight, and drawn in the page like the
-  highlight. Never on a screenshot that isn't part of a comparison.
+  label saying the difference in a few words: "Editor can create a new
+  version". It must never look like part of the UI, so: Stakater orange,
+  bold italic text with no background, placed in empty space away from the
+  page's content, joined to its highlight by a thin orange line ending in a
+  dot. Where the line crosses the page's own text, it breaks around it.
+  Never on a screenshot that isn't part of a comparison.
 - **The highlighted element is in view,** scrolled to if needed, not hidden
   behind a menu.
 
