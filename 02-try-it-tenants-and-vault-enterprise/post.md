@@ -670,21 +670,20 @@ your Vault UI's callback URL.
 ### What people see
 
 Each person sees their team's secrets, with what their access level allows.
-An editor sees an app's secret and can write a new version:
+Look at the top right of each screen. An editor sees an app's secret, and
+the **Create new version** button to change it:
 
 ![The Vault UI for a member of acme-editors: the secret db, with the Create new version button](screenshots/sso-editor-view.png)
 
-A viewer sees the same secret, and can't change it:
+A viewer sees the same secret, but the button isn't there: only **Copy**
+and **Version 1**. A viewer can read, and can't change anything:
 
 ![The Vault UI for a member of acme-viewers: the same secret, without Create new version](screenshots/sso-viewer-view.png)
 
 These two views come from the extension's own tests, not from this
-tutorial's run, which signs no people in. The fourth tutorial in this
-series,
-[Hands-on: one login for tenant members](../04-try-it-one-login-for-tenant-members/post.md),
-covers it end to end: it connects an identity provider once, through the
-Dex that ships with Multi-Tenant Operator, and a team member signs in to
-OpenShift and Vault with the same account, seeing only their own team.
+tutorial's run, which signs no people in. Signing people in end to end,
+with one account for OpenShift and Vault and each person seeing only their
+own team, is covered in a later article in this series.
 
 ## Clean up
 
