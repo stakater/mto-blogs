@@ -4,7 +4,9 @@
 Outlet: Red Hat Developer (tutorial), then the Stakater blog, canonical link back.
 Companion to post 3, "One login, every tool", which explains why.
 Continues on the cluster from post 2.
-Screenshots: each "Screenshot to capture" line is a slot; the files are listed in screenshots/README.md.
+Screenshots: each "Screenshot to capture" line is a slot, filled during the validation run.
+Its "Highlight" line says what the capture marks. The full list, with highlights, is in
+screenshots/README.md.
 -->
 
 In [One login, every tool](../03-one-login-for-tenant-members/post.md), we
@@ -22,7 +24,7 @@ By the end:
 - you remove her from the team in one place, and her access goes in both
   tools
 
-Allow about an hour.
+Allow about an hour. Validated on OpenShift [version, from the validation run].
 
 ### Why this is a separate tutorial
 
@@ -37,7 +39,9 @@ apps are all you need.
 You need the cluster from the first tutorial, with everything from it
 running: Multi-Tenant Operator, Vault Enterprise with the `vault-ui` route,
 Vault Config Operator, External Secrets Operator, the extension, and the two
-tenants. Keep the `v` helper from it:
+tenants. Keep the `v` helper from it. `v` is short for `vault`: it runs the
+`vault` command inside the Vault pod, with the root token. If you're in a
+new shell, define it again:
 
 ```bash
 v() { oc -n vault exec -i vault-0 -- env VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=root vault "$@"; }
@@ -54,13 +58,13 @@ cd mto-blogs/04-try-it-one-login-for-tenant-members/examples
 
 Here's what you'll set up:
 
-| Piece | Job |
-|---|---|
-| Keycloak | Stands in for your company's identity provider: people and groups |
-| Dex, which ships with Multi-Tenant Operator | The one connection to the identity provider; OpenShift and Vault are its clients |
-| OpenShift OAuth | Signs people in to OpenShift through Dex, and takes their groups |
-| The tenants | Name the groups that may use them |
-| The Vault extension | Gives each tenant a Vault sign-in, one role per access level |
+| Component | Version | Where it comes from | Job |
+|---|---|---|---|
+| Keycloak | 26.4.0, dev mode | `quay.io/keycloak/keycloak` | Stands in for your company's identity provider: people and groups |
+| Dex | Ships with Multi-Tenant Operator | Already running, from the first tutorial | The one connection to the identity provider; OpenShift and Vault are its clients |
+| OpenShift OAuth | Built in | Your cluster | Signs people in to OpenShift through Dex, and takes their groups |
+| The tenants | – | The first tutorial | Name the groups that may use them |
+| The Vault Enterprise extension | 0.1.0 | Installed in the first tutorial | Gives each tenant a Vault sign-in, one role per access level |
 
 ## Step 1: Collect the addresses
 
@@ -273,7 +277,7 @@ helm upgrade mto-extension-vault-enterprise-bootstrap \
 ```
 
 Within a minute, each tenant's Vault namespace has an OIDC sign-in with one
-role per access level:
+role per access level. Ask Vault, with the `v` helper:
 
 ```bash
 v list -namespace=acme auth/oidc/sso/role
@@ -301,29 +305,35 @@ oc whoami --show-console
 
 On the login page, choose **tenants**.
 
-> 📷 **Screenshot to capture:** the OpenShift login page, with the
-> "tenants" identity provider.
+> 📷 **Screenshot to capture** (`01-openshift-login-tenants.png`): the OpenShift
+> login page, with a button per identity provider, including **tenants**.
+> **Highlight:** the button `tenants`.
 
 Dex asks how to sign in. Choose **Company sign-in**. (The other option is
 the local account Multi-Tenant Operator creates for its own console.)
 
-> 📷 **Screenshot to capture:** Dex's sign-in choice, with "Company
-> sign-in".
+> 📷 **Screenshot to capture** (`02-dex-chooser.png`): Dex's page asking how to
+> sign in, with **Company sign-in** and the local account.
+> **Highlight:** the option `Company sign-in`.
 
 Sign in to Keycloak as `anna`, with her password from step 3.
 
-> 📷 **Screenshot to capture:** the Keycloak sign-in form for realm
-> `tenants`.
+> 📷 **Screenshot to capture** (`03-keycloak-login.png`): the Keycloak sign-in
+> form for realm `tenants`, with the username `anna` typed in and the password
+> field empty. **Highlight:** None.
 
 Anna lands in the console and sees one project: `acme-shop`.
 
-> 📷 **Screenshot to capture:** the OpenShift console as Anna, with only
-> `acme-shop` in the project list.
+> 📷 **Screenshot to capture** (`04-openshift-anna-projects.png`): the OpenShift
+> console signed in as Anna, the Projects page, with only `acme-shop` in the list.
+> **Highlight:** the row `acme-shop`.
 
 Now try the other team's project. Open
 `https://<console>/k8s/cluster/projects/globex-web`. Anna has no access.
 
-> 📷 **Screenshot to capture:** Anna opening `globex-web`, with no access.
+> 📷 **Screenshot to capture** (`05-openshift-anna-globex-denied.png`): the
+> OpenShift console as Anna, on the project `globex-web`, saying she has no access.
+> **Highlight:** the no-access message.
 
 **What just happened:** Dex sent OpenShift Anna's groups, and OpenShift
 added her to its group `acme-editors`, which Multi-Tenant Operator had
@@ -353,21 +363,26 @@ Sign in with:
 - **Mount path** (under "More options"): `oidc/sso`
 - **Role:** `sso.acme.editor`
 
-> 📷 **Screenshot to capture:** the Vault sign-in page with namespace
-> `acme`, method OIDC, mount path `oidc/sso` and role `sso.acme.editor`.
+> 📷 **Screenshot to capture** (`06-vault-login-oidc.png`): the Vault UI sign-in
+> page, filled in: namespace `acme`, method OIDC, mount path `oidc/sso`, role
+> `sso.acme.editor`. **Highlight:** the namespace field, and the role field.
 
 Vault sends Anna through the same sign-in. She's already signed in to
 Keycloak, so she comes straight back. Open `kv`, then
 `dev/acme-shop/checkout/db`. She sees the secret's keys, and **Create new
 version**, because she's an editor.
 
-> 📷 **Screenshot to capture:** Anna in Vault, viewing the secret `db`, with
-> "Create new version".
+> 📷 **Screenshot to capture** (`07-vault-anna-editor.png`): the Vault UI signed
+> in as Anna, in namespace `acme`, the secret `dev/acme-shop/checkout/db`, with
+> its keys hidden and the **Create new version** button.
+> **Highlight:** the button `Create new version`.
 
 Sign out, and try the other team: namespace `globex`, role
 `sso.globex.editor`. Vault refuses, because Anna isn't in `globex-editors`.
 
-> 📷 **Screenshot to capture:** the refused sign-in to namespace `globex`.
+> 📷 **Screenshot to capture** (`08-vault-anna-globex-refused.png`): the Vault UI
+> sign-in page for namespace `globex`, role `sso.globex.editor`, showing Vault's
+> error after Anna is sent back. **Highlight:** the error message.
 
 ## Step 11: Anna leaves the team
 
@@ -394,14 +409,18 @@ oc get oauthaccesstokens -o custom-columns=NAME:.metadata.name,USER:.userName --
   | awk '$2=="anna@example.com" {print $1}' | xargs -r oc delete oauthaccesstokens
 ```
 
+Her Vault sign-in ends on its own: it lasts 15 minutes by default, and
+can't be renewed past an hour.
+
 Now Anna signs in again, in a new private window:
 
 - **OpenShift:** she signs in, and has no projects. OpenShift took her out of
   `acme-editors` because her groups claim no longer has it.
 - **Vault:** her sign-in to `acme` as `sso.acme.editor` is refused.
 
-> 📷 **Screenshot to capture:** the OpenShift console as Anna after leaving
-> the group, with no projects.
+> 📷 **Screenshot to capture** (`09-openshift-anna-after-move.png`): the OpenShift
+> console signed in as Anna again, after she left `acme-editors`, the Projects
+> page with no projects. **Highlight:** the empty project list.
 
 ```bash
 oc get group acme-editors

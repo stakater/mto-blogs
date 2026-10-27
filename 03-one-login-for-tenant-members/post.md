@@ -203,8 +203,9 @@ with editor rights in `acme` only.
 
 In the OpenShift console, Anna sees her team's projects, and no others.
 
-> 📷 **Screenshot to capture:** the OpenShift console signed in as Anna,
-> showing only the project `acme-shop`.
+> 📷 **Screenshot to capture** (`04-openshift-anna-projects.png`): the OpenShift
+> console signed in as Anna, the Projects page, with only `acme-shop` in the list.
+> **Highlight:** the row `acme-shop`.
 
 In Vault, she sees her team's secrets, with the editor's "Create new
 version" button:
@@ -225,9 +226,9 @@ because none of her groups belong to that tenant.
   extension's end-to-end tests check that each group gives exactly its
   level, in its own tenant only.
 - **Sessions end on their own clock.** Removing Anna from a group stops her
-  next sign-in. Sessions she already has last until they expire: one hour
-  for a Vault token by default, and the OpenShift session lifetime your
-  cluster is configured with. For an immediate cut-off, revoke her sessions
+  next sign-in. Sessions she already has last until they expire: a Vault
+  sign-in lasts 15 minutes by default, renewable up to an hour, and an
+  OpenShift session lasts as long as your cluster is configured for. For an immediate cut-off, revoke her sessions
   as part of your leaver process.
 - **Vault stays in charge.** People sign in through Vault's own OIDC method,
   and OpenShift through its own identity provider configuration. Nothing
