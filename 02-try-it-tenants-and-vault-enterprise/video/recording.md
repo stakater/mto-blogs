@@ -26,9 +26,16 @@ while the camera runs:
 
 | Kind | What it is | Records |
 |---|---|---|
-| **Terminal tapes** | Plain text files for [VHS](https://github.com/charmbracelet/vhs): what to type, and what to wait for | The terminal pane of each beat, at the pane's size |
-| **Browser scripts** | [Playwright](https://playwright.dev) scripts: open the "before" page, refresh until the change appears, highlight it | The console pane of each beat, at the pane's size |
-| **`record.sh`** | Runs the beats in the tutorial's order, starting each beat's browser and tape together | The clips, and a timeline with each clip's start time |
+| **Terminal tapes** | Plain text files in [VHS](https://github.com/charmbracelet/vhs)'s tape format: what to type, and what to wait for | The terminal pane of each beat, at the pane's size |
+| **Scenes** | `browser/scenes.mjs`, one entry per beat of the scene table: the console's "before" page, how it refreshes, and what to highlight | The console pane of each beat, at the pane's size |
+| **`record.sh`** | Runs the beats in the tutorial's order, starting each split beat's console and terminal together | The clips, a timeline with each clip's start time, and marks for the edit |
+
+Both panes are [Playwright](https://playwright.dev) recordings, made by one
+process on one clock. The tapes are played in a ttyd terminal, the same
+terminal VHS draws (xterm.js in a browser), and Playwright records it like
+any other page. VHS's own recordings can't be lined up with a console clip:
+in a container they ran at 27 to 84% of real time, depending on size and
+frame rate. Playwright's run at real time.
 
 Re-recording is then one command: when the tutorial or a product changes,
 run `record.sh` again on a clean cluster.
@@ -49,17 +56,16 @@ chapters 8 to 11 there and the installs on a fresh cluster later.
 On the machine that records:
 
 ```bash
-brew install vhs ffmpeg        # VHS also installs ttyd, which it needs
 node --version                 # 20 or later
+docker info >/dev/null         # Docker: the terminal runs in VHS's image
 cd 02-try-it-tenants-and-vault-enterprise/video
 npm install                    # Playwright, pinned in package.json
 npx playwright install chromium
 ```
 
-If Homebrew has no VHS or ffmpeg bottles for your macOS (13 has none, so it
-builds 16 formulae from source), skip that line and install Docker:
-`record.sh` then runs VHS and ffmpeg from VHS's container image, with Linux
-`oc` and `helm` it downloads to `.tools/`.
+VHS's container image provides the terminal server (ttyd) and ffmpeg;
+`record.sh` adds Linux `oc` and `helm`, downloaded to `.tools/`. Nothing
+else is installed on the machine.
 
 Secrets come from files, never typed, never printed. Before recording, set:
 
@@ -70,8 +76,17 @@ export OCP_CONSOLE_USER=<user>                         # for the OpenShift conso
 export OCP_CONSOLE_PASSWORD_FILE=/path/to/password-file
 ```
 
+On a cluster that signs in through SSO, save a console session instead and
+point `OCP_CONSOLE_STATE` at it: `node browser/console-session.mjs` opens a
+window to sign in. `record.sh` checks it before recording anything; it ends
+with the SSO session, about a day.
+
 The Multi-Tenant Operator console's password and Vault's dev root token are
 read from the cluster by the scripts, at run time.
+
+**A cluster that already has the tutorial:** `./reset.sh` removes all of it
+(tenants, Vault and its data, the operators), in an order that leaves no
+stuck resources or webhooks behind.
 
 ## Layout
 
@@ -79,56 +94,52 @@ read from the cluster by the scripts, at run time.
 video/
   plan.md, narration-demo.md, recording.md
   package.json
-  record.sh
+  record.sh                starts the terminal server, runs record.mjs, converts the clips
+  record.mjs               runs the beats; writes clips/timeline.csv and clips/marks.csv
+  reset.sh                 removes the tutorial from a cluster, for a real "before"
+  lib/term.mjs             plays a tape in the terminal page
   tapes/
     _setup.tape            shared settings and hidden helpers, sourced by every tape
-    02-install-mto.tape
-    03-vault.tape
+    _split.tape            the split pane's size: 768x1080, font 18
+    02b-template-operator.tape
     ...
   browser/
-    lib.mjs                launch, sign-in helpers, highlight()
-    02-install-mto.mjs
-    ...
+    lib.mjs                panes, sign-in helpers, highlight(), the refresh loop
+    scenes.mjs             the scene table: one entry per beat
+    console-session.mjs    saves an OpenShift console session (SSO clusters)
   clips/                   output, in .gitignore; the dry run's clips are committed for review
 ```
 
-Name every file `NN-<chapter>`, with `NN` the chapter number from the
-[plan](plan.md#chapters), so clips sort in video order.
+Beats are named after the scene table: `NN` is the chapter number from the
+[plan](plan.md#chapters) and a letter orders the beats in it (`08a`, `08b`).
+A split beat makes `NNx-<name>-console.mp4` and `NNx-<name>-terminal.mp4`;
+a terminal or console beat makes `NNx-<name>.mp4`.
 
 ## Terminal tapes
 
-**Pane sizes:** the settings below are for a full-screen terminal beat. For a
-split beat, the tape sets `Width 768`, `Height 1080` and `FontSize 18`, so
-the pane is recorded at its final size.
-
-Every tape starts from the shared settings:
+The tapes use VHS's tape format; `lib/term.mjs` plays them. Every tape
+sources the shared settings, and a split beat's tape also sources the split
+pane's:
 
 ```
 Source tapes/_setup.tape
-Output clips/08-tenants-terminal.mp4
+Source tapes/_split.tape
 ```
 
-`_setup.tape` holds:
+`_setup.tape` sets a full-screen terminal (1920x1080, font 22, padding 40,
+Dracula, 35 ms per character), a 600-second wait limit, and the prompt
+`$ `. It then defines the `v` and `vt` helpers and moves to `examples/`,
+hidden. `_split.tape` sets 768x1080, font 18, padding 24.
 
-```
-Set Shell bash
-Set FontSize 22
-Set Width 1920
-Set Height 1080
-Set Padding 40
-Set Theme "Dracula"
-Set TypingSpeed 35ms
+The commands `lib/term.mjs` understands: `Type` (with `Enter` on the same
+line, or alone), `Enter`, `Backspace`, `Sleep`, `Hide`, `Show`, `Wait`
+(the prompt is back), `Wait+Screen /re/` and `Wait+Line /re/` (each with an
+optional `@<duration>`), and one addition, `RepeatUntil /re/ 5s`: run the
+last command again every 5 seconds until the screen matches, for "repeat
+until it lists them". `Hide` covers the terminal with a plain pane, so a
+hidden part records as an empty terminal; the edit cuts it.
 
-Hide
-Type "export PS1='$ '; clear" Enter
-Type `v()  { oc -n vault exec -i vault-0 -- env VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=root vault "$@"; }` Enter
-Type `vt() { local t=$1; shift; oc -n vault exec -i vault-0 -- env VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN="$t" vault "$@"; }` Enter
-Type "cd ../examples && clear" Enter
-Show
-```
-
-Strings that contain double quotes go in backticks, as above, rather than
-escaped.
+Strings that contain double quotes go in backticks rather than escaped.
 
 Rules for every tape:
 
@@ -138,81 +149,60 @@ Rules for every tape:
 - **Wait for the result, not for a fixed time.** Use `Wait+Screen /pattern/`
   for what proves the step worked, such as `/successfully rolled out/` or
   `/acme\//`, with a `Sleep 2s` after so the viewer can read it. Waits run in
-  real time; they're sped up in the edit, not here.
+  real time; they're sped up in the edit, not here. The screen is the
+  visible terminal, with lines the pane wrapped joined back, so a word split
+  at the edge still matches.
 - **Long commands are typed, not pasted,** but lines over about 100
-  characters use the tutorial's `\` line breaks, so they stay readable.
+  characters use the tutorial's `\` line breaks, so they stay readable. At
+  768 pixels the split pane is 68 columns wide, so long lines wrap.
 - **Anything that would show a secret runs hidden**, between `Hide` and
-  `Show`. In this tutorial: creating the Vault license Secret (step 2), and
-  reading the Multi-Tenant Operator console's password (step 7). The command
-  that reads the password must never run where it's recorded.
+  `Show`. In this tutorial: creating the Vault license Secret (step 2). The
+  Multi-Tenant Operator console's password is never read in a tape; the
+  scripts read it in memory.
 - **Things only the recording needs run hidden too:** setting variables such
   as `APPS_DOMAIN`, or `clear` between parts.
-- **Keep each part within one screen,** 34 rows at these settings. VHS
-  0.10's `Wait+Screen` reads only the terminal's first screen since the last
-  `clear`: once the output scrolls, it can't see new text, and the wait times
-  out. Put a hidden `clear` between parts, for example after `cat` of a long
-  file. A plain `Wait` (the prompt is back) still works after scrolling.
 
 ## Browser scripts
 
-**Pane sizes:** the example below records 1920×1080, for a full-screen
-console beat. For a split beat, the viewport and `recordVideo` size are
-1152×1080. And a split beat's script doesn't click through: it opens the
-"before" page, then reloads it (or clicks the console's Refresh) every 2
-seconds until the expected element appears, highlights it, and holds 3
-seconds.
+`browser/scenes.mjs` holds one entry per beat. A **split** beat has a `tape`
+and a console:
 
-`browser/lib.mjs` gives every script the same browser and the same
-highlight:
+| Field | What it does |
+|---|---|
+| `before(page)` | Opens the "before" page, signed in, and waits until it has settled |
+| `find(page)` | Returns what to highlight once the change is there, else `null` |
+| `refresh(page)` | The console's own way to update, run every 2 seconds until `find` succeeds |
+| `refreshAfter` | Holds the refresh back until the terminal shows this pattern: for a console whose refresh shows a loading state |
+| `openEarly` | Opens this beat's console during the previous beat, before its command: for a change that command causes |
+| `after(pane)` | What to show after the highlight, such as the Secret's owner |
 
-```js
-import { chromium } from 'playwright';
+A **console** beat has `run(pane)`, a scripted walk through the console; a
+**terminal** beat has only its tape. `pre` and `post` run between beats,
+unrecorded.
 
-export async function start(clip) {
-  const browser = await chromium.launch();
-  const context = await browser.newContext({
-    viewport: { width: 1920, height: 1080 },
-    recordVideo: { dir: 'clips/raw', size: { width: 1920, height: 1080 } },
-    colorScheme: 'light',
-    locale: 'en-US',
-    ignoreHTTPSErrors: true,
-  });
-  const page = await context.newPage();
-  return { browser, context, page, clip };
-}
+How each console refreshes:
 
-// Same style as the screenshots: 3 px Stakater orange, drawn in the page.
-export async function highlight(locator) {
-  await locator.scrollIntoViewIfNeeded();
-  await locator.evaluate((el) => {
-    el.style.outline = '3px solid #EA7845';
-    el.style.outlineOffset = '4px';
-    el.style.borderRadius = '6px';
-  });
-  await locator.page().waitForTimeout(1500); // let the viewer see it
-}
+| Console | Refresh |
+|---|---|
+| OpenShift console | None: it watches the API, so the change appears by itself |
+| Vault UI | In place, through the UI's own router, after clearing its cached lists. A reload would sign out, since a root token lives only in memory |
+| Reloader console | Its own **Refresh** button |
+| Multi-Tenant Operator console | A reload, once the command's result is on the terminal (`refreshAfter`), since a reload shows loading placeholders |
 
-// Close to flush the video, then save it under the chapter's name.
-export async function finish({ browser, context, page, clip }) {
-  const video = page.video();
-  await context.close();
-  await video.saveAs(`clips/${clip}.webm`);
-  await browser.close();
-}
-```
+The highlight is the screenshot guideline's (3 px Stakater orange, offset 4
+px), drawn on the element and also as a box over it, because the OpenShift
+console re-renders live and drops a style set on the element. Each
+highlight's box goes into `clips/marks.csv`, so the edit can zoom in on it.
 
-Rules for every browser script:
+Rules for every scene:
 
-- **Sign in before the part that's recorded,** or crop it out: the clip
-  should start on the page that matters.
-- **Click where the tutorial says,** at a calm pace: about a second between
-  actions, and 2 seconds on each page before moving on.
+- **Sign in before the part that's recorded.** The OpenShift and
+  Multi-Tenant Operator consoles are signed in before the pane is created;
+  the Vault UI signs in inside the pane (a root token can't be carried over),
+  so the pane's start time in the timeline is after it.
 - **Highlight what the tutorial's screenshot highlights,** in the same order.
-  The highlights are listed in
-  [screenshots/README.md](../screenshots/README.md).
+  The highlights are listed in [screenshots/README.md](../screenshots/README.md).
 - **Dismiss banners and tours** before the recorded part, as for screenshots.
-- **Convert each clip to MP4** at the end of `record.sh`:
-  `ffmpeg -i clips/NN-x.webm -c:v libx264 -pix_fmt yuv420p clips/NN-x.mp4`.
 
 ## Scenes
 
@@ -252,18 +242,38 @@ console starts on its "before" state, already signed in, and refreshes every
 | Step 10 | Put back | Split | Vault UI, `acme`, policy `kv.acme.acme-shop.checkout`: the widened rule just written | the wait (sped up) | the original rule, back |
 | Cold open | The end result | Console | Vault namespace picker, then the Multi-Tenant Operator console's Tenants | – | `acme`, `globex`. Record last. |
 
+Notes from the dry run, for the rows above:
+
+- **Step 4, Reloader's console:** right after the install it lists only
+  Reloader's own three components; there's no event log until a workload
+  restarts. The beat highlights the three components.
+- **Step 5, the narrow policy:** Vault 2.1's policies are `default`,
+  `default-ceiling` and `root` before the change.
+- **Step 7, Tenants appear:** the Multi-Tenant Operator console must be on
+  before the apply, so the tutorial switches it on first (the post's step 7
+  was reordered for this).
+- **Step 7, Vault namespaces appear:** the picker's "before" is `root` and
+  `shared` (`shared` comes from the extension, in step 6). The namespaces
+  are created by the apply, about 15 seconds later, so this beat's console
+  opens during the previous beat (`openEarly`) and refreshes once the
+  terminal lists them.
+
 Chapters 1 (the problem) and the close are cards, made in the edit.
 
 ## `record.sh`
 
-- Runs the beats in the scene table's order, then the cold open.
-- For a split beat: starts the browser on the "before" page, waits for it to
-  settle, records its start time, starts the tape, records its start time,
-  and stops both once the change is highlighted and held 3 seconds.
-- Stops at the first failure, saying which chapter and which command.
-- Writes `clips/timeline.csv`: beat, clip, start time, end time. The edit
-  lines up each split beat's two clips by their start times, and speeds up
-  the waits.
+- Runs the beats in the scene table's order, then the cold open; or only
+  the beats named (`./record.sh 08a 08b`, `./record.sh 08a-10c`).
+- For a split beat: opens the console on its "before" page, records its
+  start time, starts the tape, records its start time, and stops both once
+  the change is highlighted and held 3 seconds and the tape has finished.
+  If the change is already there when the console opens, the timeline says
+  so: that beat has no real "before".
+- Stops at the first failure, saying which beat and which tape line or page.
+- Writes `clips/timeline.csv`: beat, clip, start and end (Unix seconds, the
+  usable part), offset (seconds into the clip file where that part starts),
+  layout, and a note. And `clips/marks.csv`: clip, label (`before`,
+  `change`, `after`, …), seconds into the clip, and the highlighted box.
 - Never prints a secret, and never writes one to a file under `video/`.
 
 ## Dry run: done when
