@@ -1,7 +1,7 @@
-# Step 6: the extension. TOP_NS and TOP_SA come from step 1; this shell is new.
+# Step 6, split: the extension. The console shows its parent TemplateInstance
+# appear in vault-config. TOP_NS and TOP_SA come from step 1; this shell is new.
 Source tapes/_setup.tape
-Output clips/07-extension-terminal.mp4
-
+Source tapes/_split.tape
 Hide
 Type "export TOP_NS=multi-tenant-operator TOP_SA=tenant-operator-template-operator-v2 && clear" Enter
 Wait

@@ -54,7 +54,8 @@ would double it and mix two questions. Each post says so where it ends.
   (explainer, tutorial, demo video), channels, and how a topic is made
 - Guidelines: [explainer](docs/guidelines/explainer.md),
   [tutorial](docs/guidelines/tutorial.md),
-  [screenshots](docs/guidelines/screenshots.md), [video](docs/guidelines/video.md)
+  [screenshots](docs/guidelines/screenshots.md), [video](docs/guidelines/video.md),
+  [recording](docs/guidelines/recording.md)
 - [Templates](docs/templates/): where every new piece starts
 - [Backlog](docs/backlog.md): topics not started yet, and open decisions
 - [CLAUDE.md](CLAUDE.md): the rules every piece follows

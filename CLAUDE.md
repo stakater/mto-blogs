@@ -17,7 +17,7 @@ how to get it.
 
 The plan for the whole series is in [docs/content-strategy.md](docs/content-strategy.md),
 and each kind of piece has a guideline in [docs/guidelines/](docs/guidelines/):
-explainer, tutorial, screenshots, video. Follow the guideline for the piece
+explainer, tutorial, screenshots, video, recording. Follow the guideline for the piece
 you're working on, and tick its checklist before review.
 
 **Start every new piece from its template** in [docs/templates/](docs/templates/):
