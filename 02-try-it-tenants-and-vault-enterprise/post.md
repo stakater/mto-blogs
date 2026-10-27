@@ -353,23 +353,9 @@ spec:
       - shop
 ```
 
-```bash
-oc apply -f tenants.yaml
-```
-
-Multi-Tenant Operator creates the projects `acme-shop` and `globex-web`, and
-labels each with its tenant.
-
-![Project acme-shop, Details tab: among its labels, stakater.com/tenant=acme](screenshots/07-project-tenant-label.png)
-
-In the console, open **Ecosystem → Installed Operators → Multi Tenant
-Operator** and the **Tenant** tab:
-
-![Multi Tenant Operator's Tenant tab: acme and globex, both Ready](screenshots/04-mto-tenants.png)
-
-Multi-Tenant Operator also has its own console, which shows each tenant
-with its projects, quota and costs. Switch it on, and let its built-in
-account see every tenant:
+Before you create them, switch on Multi-Tenant Operator's own console, so you
+can watch them arrive. It shows each tenant with its projects, quota and
+costs. The same patch lets its built-in account see every tenant:
 
 ```bash
 oc -n multi-tenant-operator patch integrationconfig tenant-operator-config --type merge -p '{
@@ -396,7 +382,24 @@ It sees every tenant, and anyone who can read Secrets in
 series connects an identity provider, and the Multi-Tenant Operator docs
 describe [removing the default login](https://docs.stakater.com/mto/latest/getting-started/production-readiness.html).
 
-The **Tenants** page lists both teams:
+Its **Tenants** page is empty for now. Create the tenants:
+
+```bash
+oc apply -f tenants.yaml
+```
+
+Multi-Tenant Operator creates the projects `acme-shop` and `globex-web`, and
+labels each with its tenant.
+
+![Project acme-shop, Details tab: among its labels, stakater.com/tenant=acme](screenshots/07-project-tenant-label.png)
+
+In the OpenShift console, open **Ecosystem → Installed Operators → Multi
+Tenant Operator** and the **Tenant** tab:
+
+![Multi Tenant Operator's Tenant tab: acme and globex, both Ready](screenshots/04-mto-tenants.png)
+
+Back in Multi-Tenant Operator's console, the **Tenants** page now lists both
+teams:
 
 ![The Multi-Tenant Operator console, Tenants page, listing acme and globex](screenshots/08a-mto-console-tenants.png)
 
