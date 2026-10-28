@@ -71,6 +71,45 @@ Grafana extension runs today; others follow.
 
 **Status:** idea.
 
+### Ansible Automation Platform and Multi-Tenant Operator: better together
+
+**Why:** customers, and sometimes Red Hat's own field, see Ansible Automation
+Platform (AAP) and Multi-Tenant Operator as competing "multi-tenant
+platforms". They work at different layers. AAP's multi-tenancy is *who may
+automate what*: organizations, teams, credentials. Multi-Tenant Operator's is
+*what a team owns on the platform*: namespaces, quotas, access, costs, and
+its slice of every tool. AAP runs a workflow once when triggered;
+Multi-Tenant Operator reconciles continuously. Together: **AAP is the front
+door, Multi-Tenant Operator is the floor.**
+
+**The story:**
+
+- **Front door:** a request in ServiceNow goes to an AAP workflow. AAP does
+  the work outside the cluster (directory groups, DNS, firewall, CMDB) and
+  opens a pull request that adds or changes the `Tenant`.
+- **Floor:** once merged, Multi-Tenant Operator creates the team's
+  namespaces, quotas and access, and its slice of Vault, Argo CD and
+  Grafana, and keeps them right from then on.
+- **Back to the door:** Event-Driven Ansible reacts when the tenant is ready,
+  and AAP closes the ticket and updates the CMDB.
+- **Possible extension:** each tenant gets its own AAP organization and team,
+  so teams run their own automation within their own boundary. An idea, not
+  built.
+
+**Pieces:** a deck in `mto-sales` (`/aap`), then an explainer and a tutorial
+here: an AAP workflow that opens the `Tenant` pull request, and
+Event-Driven Ansible reacting when the tenant is ready.
+
+**Before writing:**
+
+- Feedback on the deck from an AAP expert who knows Multi-Tenant Operator.
+- Check with Raffaele how Red Hat's field frames AAP's multi-tenancy, and
+  whether Red Hat would co-author a "better together" article.
+- For the tutorial: the AAP version, the collections it uses
+  (`kubernetes.core`, `servicenow.itsm`), and a run end to end.
+
+**Status:** deck in progress.
+
 ## Open decisions
 
 None open. Decided:
