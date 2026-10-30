@@ -1,0 +1,18 @@
+# Anna's Application for production, once acme has acme-prod.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hello-prod
+  namespace: acme-argocd
+spec:
+  project: acme
+  source:
+    repoURL: https://github.com/stakater/mto-blogs-acme-gitops
+    targetRevision: main
+    path: .
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: acme-prod
+  syncPolicy:
+    automated:
+      selfHeal: true
