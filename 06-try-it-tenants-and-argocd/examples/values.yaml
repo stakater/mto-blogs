@@ -1,0 +1,31 @@
+# Values for the Argo CD extension for Multi-Tenant Operator, for this
+# tutorial. Install with:
+#   helm upgrade --install mto-extension-argocd \
+#     oci://ghcr.io/stakater/charts/mto-extension-argocd --version 0.7.1 \
+#     -n multi-tenant-operator -f values.yaml \
+#     --set rbac.serviceAccount.name="$TOP_SA" \
+#     --set rbac.serviceAccount.namespace="$TOP_NS"
+argocd:
+  # Where Argo CD runs. Every AppProject is created here, and it is never a
+  # tenant destination.
+  namespace: openshift-gitops
+
+  # Each tenant may deploy from its own repository only. One shared
+  # repository would let every tenant deploy every other tenant's code.
+  sourceRepos:
+    pattern:
+      - https://github.com/stakater/mto-blogs-{{ tenant }}-gitops
+
+  # Tenants keep their Applications in their own namespace, <tenant>-argocd,
+  # never in Argo CD's control plane.
+  sourceNamespaces:
+    enabled: true
+    pattern: "{{ tenant }}-argocd"
+
+  # Kinds Multi-Tenant Operator already owns in tenant namespaces. An
+  # Application that carried one would fight Multi-Tenant Operator on every sync.
+  namespaceResourceBlacklist:
+    - group: ""
+      kind: ResourceQuota
+    - group: ""
+      kind: LimitRange
