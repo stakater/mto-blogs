@@ -203,8 +203,7 @@ with editor rights in `acme` only.
 
 In the OpenShift console, Anna sees her team's projects, and no others.
 
-> 📷 **Screenshot to capture:** the OpenShift console signed in as Anna,
-> showing only the project `acme-shop`.
+![OpenShift console signed in as Anna, the Projects page: only acme-shop](screenshots/03-openshift-anna-projects.png)
 
 In Vault, she sees her team's secrets, with the editor's "Create new
 version" button:
@@ -225,9 +224,9 @@ because none of her groups belong to that tenant.
   extension's end-to-end tests check that each group gives exactly its
   level, in its own tenant only.
 - **Sessions end on their own clock.** Removing Anna from a group stops her
-  next sign-in. Sessions she already has last until they expire: one hour
-  for a Vault token by default, and the OpenShift session lifetime your
-  cluster is configured with. For an immediate cut-off, revoke her sessions
+  next sign-in. Sessions she already has last until they expire: a Vault
+  sign-in lasts 15 minutes by default, renewable up to an hour, and an
+  OpenShift session lasts as long as your cluster is configured for. For an immediate cut-off, revoke her sessions
   as part of your leaver process.
 - **Vault stays in charge.** People sign in through Vault's own OIDC method,
   and OpenShift through its own identity provider configuration. Nothing
@@ -237,11 +236,12 @@ because none of her groups belong to that tenant.
 
 The tutorial,
 [Hands-on: one login for tenant members](https://github.com/stakater/mto-blogs/tree/main/04-try-it-one-login-for-tenant-members),
-continues on the cluster from the first tutorial. It runs a Keycloak as a
-stand-in for your company's identity provider, connects it to the Dex that
-ships with Multi-Tenant Operator, and signs Anna in to OpenShift and Vault.
-Then it moves her out of the team and shows her access go. It still fits
-the free Basic edition's two tenants.
+continues on the cluster from the first tutorial. It keeps two people and
+their groups in the Dex that ships with Multi-Tenant Operator, as a
+stand-in for your company's identity provider, and signs Anna in to
+OpenShift and Vault. Then it moves her out of the team and shows her access
+go, and it shows how Dex connects to the identity provider you already
+have. It still fits the free Basic edition's two tenants.
 
 ## What's next
 

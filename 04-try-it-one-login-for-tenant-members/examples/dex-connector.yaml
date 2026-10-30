@@ -1,16 +1,15 @@
-# Connect the Dex that ships with Multi-Tenant Operator to the identity
-# provider. In this tutorial that's the Keycloak stand-in; in production it's
-# your company's identity provider. The connection details (issuer, client ID
-# and secret) are in the Secret keycloak-connector-config, created by the
-# tutorial, never in this file.
+# Connect the Dex that ships with Multi-Tenant Operator to your company's
+# identity provider, in place of the tutorial's local users. The connection
+# details (issuer, client ID and secret) are in the Secret
+# company-connector-config, created as the tutorial shows, never in this file.
 apiVersion: auth.stakater.com/v1alpha1
 kind: Connector
 metadata:
-  name: keycloak
+  name: company
   namespace: multi-tenant-operator
 spec:
   type: oidc
-  id: keycloak
+  id: company
   name: Company sign-in
   configSecretRef:
-    name: keycloak-connector-config
+    name: company-connector-config
