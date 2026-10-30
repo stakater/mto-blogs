@@ -46,15 +46,20 @@ is the worked example.
 
 ## How it's recorded
 
+**Every change is a scene with a before and an after:** the terminal on the
+left, the console on the right, recorded at the same time on a fresh cluster,
+so the viewer watches the console change as the command runs. The
+[recording guideline](recording.md) defines the layouts, the beat, and how
+the panes stay in sync.
+
 - **From the validation run.** The same cluster and the same run as the
   screenshots, so everything matches.
 - **Scripted, so it can be re-recorded.** The terminal scenes are scripts of
   commands rendered to video (for example with VHS), so there are no typos
   and the pacing is consistent. The browser scenes are recorded by a
   scripted browser. When a step changes, re-run the scripts.
-- **1920×1080, at a size you can read.** A terminal font of at least 20
-  points at that resolution, and browser zoom so text is legible on a
-  phone.
+- **1920×1080 overall, each pane recorded at its final size,** never scaled
+  down afterwards, so text is legible on a phone.
 - **Only what the tutorial shows.** No extra steps, no hidden fixes.
 - **Browser scenes use the tutorial's highlights,** in the same style, drawn
   in the page as the scene reaches that element.
@@ -90,7 +95,8 @@ is the worked example.
 
 ## Checklist
 
-- [ ] Recorded from a validated run of the current tutorial.
+- [ ] Recorded from a validated run of the current tutorial, on a fresh
+  cluster, following the [recording guideline](recording.md).
 - [ ] Every scene matches a tutorial step; nothing extra.
 - [ ] No secret visible in any frame.
 - [ ] Sped-up parts are labeled.

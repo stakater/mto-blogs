@@ -1,7 +1,6 @@
-# Step 3: Vault Config Operator.
+# Step 3, split: Vault Config Operator. The console shows its pod appear.
 Source tapes/_setup.tape
-Output clips/04-vco-terminal.mp4
-
+Source tapes/_split.tape
 Type "helm repo add vault-config-operator https://redhat-cop.github.io/vault-config-operator" Enter
 Wait
 Type `helm upgrade --install vault-config-operator vault-config-operator/vault-config-operator \` Enter
@@ -12,6 +11,10 @@ Type `  --set 'env[2].name=SYNC_PERIOD_SECONDS'    --set-string 'env[2].value=60
 Type "  --set 'env[3].name=CACHE_VAULT_TOKEN'      --set-string 'env[3].value=true'" Enter
 Wait+Screen /STATUS: deployed/
 Sleep 1s
+Hide
+Type "clear" Enter
+Wait
+Show
 Type "oc -n vault-config-operator rollout status deploy/vault-config-operator --timeout=300s" Enter
 Wait+Screen /successfully rolled out/
-Sleep 3s
+Sleep 2s

@@ -1,0 +1,28 @@
+# The two people in this tutorial, kept in the Dex that ships with
+# Multi-Tenant Operator. Each LocalUser points to a Secret, created by the
+# tutorial, that holds the person's email, password hash and groups. Dex has
+# no group objects: a group is a name in that Secret, such as acme-editors.
+#
+# For learning only. In production, people and groups stay in your company's
+# identity provider, and Dex connects to it: see dex-connector.yaml.
+apiVersion: auth.stakater.com/v1alpha1
+kind: LocalUser
+metadata:
+  name: anna
+  namespace: multi-tenant-operator
+spec:
+  enabled: true
+  userID: anna
+  credentialSecretRef:
+    name: dex-user-anna
+---
+apiVersion: auth.stakater.com/v1alpha1
+kind: LocalUser
+metadata:
+  name: ben
+  namespace: multi-tenant-operator
+spec:
+  enabled: true
+  userID: ben
+  credentialSecretRef:
+    name: dex-user-ben

@@ -8,6 +8,7 @@ kind: Tenant
 metadata:
   name: acme
 spec:
+  quota: small
   accessControl:
     owners:
       groups: [acme-admins]
@@ -24,6 +25,7 @@ kind: Tenant
 metadata:
   name: globex
 spec:
+  quota: small
   accessControl:
     owners:
       groups: [globex-admins]

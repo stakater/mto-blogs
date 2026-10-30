@@ -32,6 +32,10 @@ card, why, do, wait (sped up and labeled), show it running, what happened,
 
 ## On screen
 
+Every change is a scene with a before and an after, following the
+[recording guideline](../../docs/guidelines/recording.md). List the beats in
+the topic's `video/recording.md`, with the guideline's scene table.
+
 [Terminal and browser settings as in the first video plan, plus anything
 special to this topic, such as a split screen at the key moment.]
 

@@ -1,14 +1,69 @@
-08-vault-split,vault root /vault/dashboard,3.9
-08-vault-split,picker open,5.9
-08-vault-split,acme and globex appear,6.0
-08-consoles,tenant tab,6.4
-08-consoles,project label,19.4
-08-consoles,mto tenants,27.0
-08-consoles,mto namespaces,35.4
-09-app,vault acme /vault/secrets-engines/kv/kv/dev%2Facme-shop%2Fcheckout%2Fdb,4.4
-09-app,vault acme /vault/policy/acl/kv.acme.acme-shop.checkout,16.5
-09-app,secret owner,29.2
-00-cold-open,vault root /vault/dashboard,3.4
-00-cold-open,mto tenants,15.2
-10-rotate,reloader,1.2
-10-rotate,vault acme /vault/secrets-engines/kv/kv/dev%2Facme-shop%2Fcheckout%2Fdb,15.8
+clip,label,seconds,x,y,width,height
+02a-install-mto,before,7.3,,,,
+02a-install-mto,tile,11.9,592,383,260,227
+02a-install-mto,installed,119.6,,,,
+02a-install-mto,after tenant-operator.v1.10.2,129.4,314,651,1558,101
+02b-template-operator-console,before,6.5,,,,
+02b-template-operator-console,change,17.2,,,,
+02b-template-operator-console,after,18.7,94,400,431,84
+03a-vault-console,before,6.8,,,,
+03a-vault-console,change,47.5,,,,
+03a-vault-console,after,48.3,48,303,129,46
+04-vco-console,before,7.4,,,,
+04-vco-console,change,44.2,,,,
+04-vco-console,after,44.9,48,303,129,122
+05a-install-eso,before,10.0,,,,
+05a-install-eso,tile,14.1,592,383,260,247
+05a-install-eso,installed,53.1,,,,
+05a-install-eso,after openshift-external-secrets-operator.v1.2.1,62.9,314,540,1558,122
+05b-eso-config-console,before,6.4,,,,
+05b-eso-config-console,change,31.2,,,,
+05b-eso-config-console,after,33.4,48,303,129,366
+05c-reloader-console,before,6.4,,,,
+05c-reloader-console,change,81.3,,,,
+05c-reloader-console,after,84.2,48,303,129,509
+05d-reloader-console,before,2.9,,,,
+05d-reloader-console,empty,5.1,297,288,1170,24
+06a-vault-k8s-auth-console,before,4.2,,,,
+06a-vault-k8s-auth-console,change,9.1,,,,
+06a-vault-k8s-auth-console,after,9.8,344,268,744,84
+06b-vco-policy-console,before,4.3,,,,
+06b-vco-policy-console,change,11.5,,,,
+06b-vco-policy-console,after,12.2,346,489,101,18
+07-extension-console,before,6.3,,,,
+07-extension-console,change,27.0,,,,
+07-extension-console,after,27.8,140,555,245,21
+08a-tenants-console,before,3.6,,,,
+08b-vault-namespaces-console,before,5.0,,,,
+08a-tenants-console,change,16.3,,,,
+08a-tenants-console,after,17.8,297,306,48,83
+08b-vault-namespaces-console,change,22.6,,,,
+08b-vault-namespaces-console,after,24.1,84,188,48,53
+08c-projects,before,3.2,,,,
+08c-projects,after,4.7,281,274,1614,130
+08d-tenant-label,before,6.7,,,,
+08d-tenant-label,after,7.4,738,448,161,26
+09a-kv-put-console,before,3.8,,,,
+09a-kv-put-console,change,12.5,,,,
+09a-kv-put-console,after,13.3,344,355,744,72
+09b-checkout-console,before,8.1,,,,
+09b-checkout-console,change,22.9,,,,
+09b-checkout-console,after,23.6,94,357,80,21
+09b-checkout-console,owner,29.2,48,834,520,21
+09c-policy,before,4.1,,,,
+09c-policy,after,4.8,449,394,266,15
+10a-rotate-console,before,2.9,,,,
+10a-rotate-console,change,15.7,,,,
+10a-rotate-console,after,17.2,273,377,862,482
+10b-rotate-again-console,before,3.0,,,,
+10b-rotate-again-console,change,15.9,,,,
+10b-rotate-again-console,after,17.4,273,791,862,138
+10c-versions,before,6.3,,,,
+10c-versions,after,8.6,364,335,71,162
+11b-put-back-console,before,4.3,,,,
+11b-put-back-console,change,59.5,,,,
+11b-put-back-console,after,60.3,449,394,266,15
+00-cold-open,before,5.3,,,,
+00-cold-open,after,6.7,84,188,48,53
+00-cold-open,mto tenants,12.8,,,,
+00-cold-open,after,14.3,297,306,48,83
