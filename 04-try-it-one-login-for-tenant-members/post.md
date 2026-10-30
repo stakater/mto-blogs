@@ -16,15 +16,15 @@ This tutorial builds it.
 
 By the end:
 
-- Anna signs in to the OpenShift console with her company account, and sees
-  only her team's project
+- Anna signs in to the OpenShift console with one account, and sees only
+  her team's project
 - she signs in to Vault with the same account, and edits only her team's
   secrets
 - she's refused in the other team, in both tools
 - you remove her from the team in one place, and her access goes in both
   tools
 
-Allow about an hour. Validated on OpenShift [version, from the validation run].
+Allow about an hour. Validated on OpenShift 4.21.
 
 ### Why this is a separate tutorial
 
@@ -47,8 +47,9 @@ new shell, define it again:
 v() { oc -n vault exec -i vault-0 -- env VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=root vault "$@"; }
 ```
 
-You also need `openssl` on your machine, and a private browser window for
-signing in as Anna.
+You also need `openssl` and `htpasswd` on your machine, and a private
+browser window for signing in as Anna. `htpasswd` comes with macOS. On
+Fedora and Red Hat Enterprise Linux, it's in the `httpd-tools` package.
 
 The example files are in the same repository:
 
@@ -60,8 +61,7 @@ Here's what you'll set up:
 
 | Component | Version | Where it comes from | Job |
 |---|---|---|---|
-| Keycloak | 26.4.0, dev mode | `quay.io/keycloak/keycloak` | Stands in for your company's identity provider: people and groups |
-| Dex | Ships with Multi-Tenant Operator | Already running, from the first tutorial | The one connection to the identity provider; OpenShift and Vault are its clients |
+| Dex | Ships with Multi-Tenant Operator | Already running, from the first tutorial | Holds the people and their groups, and signs them in; OpenShift and Vault are its clients |
 | OpenShift OAuth | Built in | Your cluster | Signs people in to OpenShift through Dex, and takes their groups |
 | The tenants | – | The first tutorial | Name the groups that may use them |
 | The Vault Enterprise extension | 0.1.0 | Installed in the first tutorial | Gives each tenant a Vault sign-in, one role per access level |
@@ -95,83 +95,55 @@ oc -n openshift-config-managed get configmap default-ingress-cert \
   -o jsonpath='{.data.ca-bundle\.crt}' > ingress-ca.crt
 ```
 
-## Step 2: Start a Keycloak
+## Step 2: Create the people and their groups
 
-Keycloak plays your company's identity provider. This one runs in dev mode
-and keeps everything in memory, so use it for learning only. In production,
-Dex connects to the identity provider you already have, such as Microsoft
-Entra ID, Okta, LDAP or Red Hat build of Keycloak.
+Multi-Tenant Operator runs Dex, and the Dex Config Operator that comes with
+it turns Kubernetes resources into Dex's configuration. In this tutorial,
+Dex also keeps the people. Each person is a `LocalUser`, with a Secret that
+holds their email, password and groups. They stand in for your company's
+identity provider. [Use your own identity provider](#use-your-own-identity-provider)
+shows how Dex connects to the one you have.
 
-```bash
-oc new-project keycloak
-oc -n keycloak create secret generic keycloak-admin \
-  --from-literal=username=admin --from-literal=password="$(openssl rand -hex 16)"
-oc apply -f keycloak.yaml
-
-KC_HOST=$(oc -n keycloak get route keycloak -o jsonpath='{.spec.host}')
-oc -n keycloak set env deploy/keycloak KC_HOSTNAME="https://$KC_HOST"
-oc -n keycloak rollout status deploy/keycloak --timeout=300s
-```
-
-## Step 3: Create the people and groups
-
-[`keycloak-realm.sh`](examples/keycloak-realm.sh) creates a realm called
-`tenants` with:
-
-- the groups `<tenant>-<level>s` for both tenants, such as `acme-editors`
-  and `globex-viewers`
-- Anna, in `acme-editors`, and Ben, in `globex-editors`
-- the client Dex signs in with, which sends each person's groups in a
-  `groups` claim
+Dex has no group objects. A group is a name in a person's Secret, so
+`acme-editors` exists because Anna has it. Create Anna, in `acme-editors`,
+and Ben, in `globex-editors`:
 
 ```bash
-DEX_KC_SECRET=$(openssl rand -hex 24)
 ANNA_PASSWORD=$(openssl rand -hex 8)
 BEN_PASSWORD=$(openssl rand -hex 8)
 
-oc -n keycloak exec -i deploy/keycloak -- env \
-  DEX_ISSUER="$DEX_ISSUER" DEX_CLIENT_SECRET="$DEX_KC_SECRET" \
-  ANNA_PASSWORD="$ANNA_PASSWORD" BEN_PASSWORD="$BEN_PASSWORD" \
-  bash -s < keycloak-realm.sh
+oc -n multi-tenant-operator create secret generic dex-user-anna \
+  --from-literal=username=anna --from-literal=email=anna@example.com \
+  --from-literal=groups=acme-editors \
+  --from-literal=password="$(htpasswd -nbBC 10 "" "$ANNA_PASSWORD" | cut -d: -f2)"
+oc -n multi-tenant-operator create secret generic dex-user-ben \
+  --from-literal=username=ben --from-literal=email=ben@example.com \
+  --from-literal=groups=globex-editors \
+  --from-literal=password="$(htpasswd -nbBC 10 "" "$BEN_PASSWORD" | cut -d: -f2)"
 
+oc apply -f dex-people.yaml
 echo "anna: $ANNA_PASSWORD   ben: $BEN_PASSWORD"
 ```
 
 ```
-realm tenants ready: anna in acme-editors, ben in globex-editors
+secret/dex-user-anna created
+secret/dex-user-ben created
+localuser.auth.stakater.com/anna created
+localuser.auth.stakater.com/ben created
+anna: <password>   ben: <password>
 ```
 
-Note both passwords. You'll sign in as Anna in step 9.
+Note both passwords. You'll sign in as Anna in step 7.
 
-## Step 4: Connect Dex to the identity provider
+- **`password`** is a bcrypt hash, made by `htpasswd`. The password itself
+  is never stored.
+- **`groups`** takes a comma-separated list, such as
+  `acme-editors,globex-viewers`, for a person in more than one team.
 
-Multi-Tenant Operator runs Dex, and the Dex Config Operator that comes with
-it turns Kubernetes resources into Dex's configuration. A `Connector`
-resource points Dex at the identity provider. Its connection details go in a
-Secret:
+[`dex-people.yaml`](examples/dex-people.yaml) creates one `LocalUser` per
+person, pointing to their Secret.
 
-```bash
-INSECURE=""   # if not trusted: INSECURE=',"insecureSkipVerify":true'
-cat > connector.json <<EOF
-{"issuer":"https://$KC_HOST/realms/tenants","clientID":"dex","clientSecret":"$DEX_KC_SECRET",
- "redirectURI":"$DEX_ISSUER/callback","scopes":["openid","profile","email"],
- "insecureEnableGroups":true$INSECURE}
-EOF
-oc -n multi-tenant-operator create secret generic keycloak-connector-config --from-file=config=connector.json
-rm connector.json
-
-oc apply -f dex-connector.yaml
-```
-
-- **`insecureEnableGroups`** passes the person's groups from Keycloak on to
-  every tool. Despite its name, it's the standard Dex setting for that.
-- **`insecureSkipVerify`** is only for a router certificate your cluster
-  doesn't trust. Leave it out in production.
-
-The Dex Config Operator rewrites Dex's configuration and restarts Dex. Give
-it a minute.
-
-## Step 5: Register OpenShift and Vault with Dex
+## Step 3: Register OpenShift and Vault with Dex
 
 Each tool becomes a `Client` of Dex, with its own secret:
 
@@ -189,7 +161,19 @@ Look at [`dex-clients.yaml`](examples/dex-clients.yaml): each client is a
 dozen lines. Adding another tool to the same sign-in later takes the same
 dozen lines.
 
-## Step 6: Sign people in to OpenShift through Dex
+After each change to the people or the clients, the Dex Config Operator
+rewrites Dex's configuration and restarts Dex. Wait until Dex is back:
+
+```bash
+sleep 15   # give the restart time to start
+until oc -n multi-tenant-operator rollout status deploy/dex --timeout=300s 2>/dev/null; do sleep 5; done
+```
+
+```
+deployment "dex" successfully rolled out
+```
+
+## Step 4: Sign people in to OpenShift through Dex
 
 OpenShift needs the client's secret in its own namespace:
 
@@ -229,7 +213,7 @@ oc wait clusteroperator authentication --for=condition=Progressing=False --timeo
 
 Your existing logins, such as `kubeadmin`, keep working alongside it.
 
-## Step 7: Let the tenants name their groups
+## Step 5: Let the tenants name their groups
 
 [`tenants-with-groups.yaml`](examples/tenants-with-groups.yaml) updates the
 two tenants from the first tutorial. Each now grants access to groups only:
@@ -247,16 +231,24 @@ spec:
 
 ```bash
 oc apply -f tenants-with-groups.yaml
-oc -n acme-shop get rolebindings -o wide | grep acme-
+oc -n acme-shop get rolebindings -o wide | grep '^acme-'
+```
+
+```
+acme-editor-edit-binding   ClusterRole/edit    ...   acme-edit-group-3d68e6, acme-editors
+acme-owner-admin-binding   ClusterRole/admin   ...   acme-owner-group-c2ef09, acme-admins
+acme-viewer-view-binding   ClusterRole/view    ...   acme-view-group-8ee042, acme-viewers
 ```
 
 **What just happened:** Multi-Tenant Operator bound each group in every
 project the tenant owns: `acme-admins` to `admin`, `acme-editors` to `edit`,
 `acme-viewers` to `view`. When the tenant gets another project, the same
-bindings follow it. The individual users from the first tutorial are gone:
+bindings follow it. The other group in each binding, such as
+`acme-edit-group-3d68e6`, holds the individual users a tenant names, and
+it's now empty. The individual users from the first tutorial are gone:
 groups are now the only way in.
 
-## Step 8: Turn on sign-in for people in Vault
+## Step 6: Turn on sign-in for people in Vault
 
 Give the extension the Vault client's secret, and switch on single sign-on
 through Dex:
@@ -295,7 +287,7 @@ sso.acme.viewer
 Each role accepts only its own group. `sso.acme.editor` accepts members of
 `acme-editors`, and nobody else.
 
-## Step 9: Anna signs in to OpenShift
+## Step 7: Anna signs in to OpenShift
 
 Open the console in a private browser window:
 
@@ -305,39 +297,27 @@ oc whoami --show-console
 
 On the login page, choose **tenants**.
 
-> 📷 **Screenshot to capture** (`01-openshift-login-tenants.png`): the OpenShift
-> login page, with a button per identity provider, including **tenants**.
-> **Highlight:** the button `tenants`.
+![OpenShift login page: a button per identity provider, with tenants highlighted](screenshots/01-openshift-login-tenants.png)
 
-Dex asks how to sign in. Choose **Company sign-in**. (The other option is
-the local account Multi-Tenant Operator creates for its own console.)
+Dex asks for an email address and a password. The page carries the name
+**MTO Console**, because the same Dex signs people in to Multi-Tenant
+Operator's console. Sign in as `anna@example.com`, with her password from
+step 2.
 
-> 📷 **Screenshot to capture** (`02-dex-chooser.png`): Dex's page asking how to
-> sign in, with **Company sign-in** and the local account.
-> **Highlight:** the option `Company sign-in`.
-
-Sign in to Keycloak as `anna`, with her password from step 3.
-
-> 📷 **Screenshot to capture** (`03-keycloak-login.png`): the Keycloak sign-in
-> form for realm `tenants`, with the username `anna` typed in and the password
-> field empty. **Highlight:** None.
+![Dex sign-in form: the email address anna@example.com typed in, the password field empty](screenshots/02-dex-login.png)
 
 Anna lands in the console and sees one project: `acme-shop`.
 
-> 📷 **Screenshot to capture** (`04-openshift-anna-projects.png`): the OpenShift
-> console signed in as Anna, the Projects page, with only `acme-shop` in the list.
-> **Highlight:** the row `acme-shop`.
+![OpenShift console signed in as Anna, the Projects page: only acme-shop](screenshots/03-openshift-anna-projects.png)
 
 Now try the other team's project. Open
 `https://<console>/k8s/cluster/projects/globex-web`. Anna has no access.
 
-> 📷 **Screenshot to capture** (`05-openshift-anna-globex-denied.png`): the
-> OpenShift console as Anna, on the project `globex-web`, saying she has no access.
-> **Highlight:** the no-access message.
+![OpenShift console as Anna, on the project globex-web: Restricted access](screenshots/04-openshift-anna-globex-denied.png)
 
 **What just happened:** Dex sent OpenShift Anna's groups, and OpenShift
 added her to its group `acme-editors`, which Multi-Tenant Operator had
-bound in step 7. Check it as an administrator:
+bound in step 5. Check it as an administrator:
 
 ```bash
 oc get group acme-editors
@@ -348,7 +328,7 @@ NAME           USERS
 acme-editors   anna@example.com
 ```
 
-## Step 10: Anna signs in to Vault
+## Step 8: Anna signs in to Vault
 
 Open the Vault UI in the same private window:
 
@@ -356,49 +336,46 @@ Open the Vault UI in the same private window:
 echo "https://$VAULT_UI_HOST"
 ```
 
-Sign in with:
+Fill in the sign-in form in this order. Type the namespace first: when it
+changes, Vault resets the rest of the form.
 
 - **Namespace:** `acme`
 - **Method:** OIDC
-- **Mount path** (under "More options"): `oidc/sso`
 - **Role:** `sso.acme.editor`
+- **Mount path** (under **Advanced settings**): `oidc/sso`
 
-> 📷 **Screenshot to capture** (`06-vault-login-oidc.png`): the Vault UI sign-in
-> page, filled in: namespace `acme`, method OIDC, mount path `oidc/sso`, role
-> `sso.acme.editor`. **Highlight:** the namespace field, and the role field.
+![Vault UI sign-in: namespace acme and role sso.acme.editor highlighted, method OIDC, mount path oidc/sso](screenshots/05-vault-login-oidc.png)
 
-Vault sends Anna through the same sign-in. She's already signed in to
-Keycloak, so she comes straight back. Open `kv`, then
-`dev/acme-shop/checkout/db`. She sees the secret's keys, and **Create new
-version**, because she's an editor.
+Choose **Sign in with OIDC Provider**. Vault opens the same Dex sign-in in a
+new window. She signs in with the same email
+address and password. Dex asks again because it doesn't remember people it
+keeps itself. With your company's identity provider behind Dex, she comes
+straight back, because her company sign-in remembers her.
 
-> 📷 **Screenshot to capture** (`07-vault-anna-editor.png`): the Vault UI signed
-> in as Anna, in namespace `acme`, the secret `dev/acme-shop/checkout/db`, with
-> its keys hidden and the **Create new version** button.
-> **Highlight:** the button `Create new version`.
+Open `kv`, then `dev/acme-shop/checkout/db`, then its **Secret** tab. She
+sees the secret's keys, and **Create new version**, because she's an editor.
+
+![Vault UI as Anna in namespace acme, the Secret tab of dev/acme-shop/checkout/db: the key password with its value hidden, and Create new version highlighted](screenshots/06-vault-anna-editor.png)
 
 Sign out, and try the other team: namespace `globex`, role
 `sso.globex.editor`. Vault refuses, because Anna isn't in `globex-editors`.
 
-> 📷 **Screenshot to capture** (`08-vault-anna-globex-refused.png`): the Vault UI
-> sign-in page for namespace `globex`, role `sso.globex.editor`, showing Vault's
-> error after Anna is sent back. **Highlight:** the error message.
+![Vault UI sign-in for namespace globex, role sso.globex.editor: Authentication failed, the claim groups does not match](screenshots/07-vault-anna-globex-refused.png)
 
-## Step 11: Anna leaves the team
+## Step 9: Anna leaves the team
 
-Remove Anna from `acme-editors` in Keycloak, the one place her team
-membership lives:
+Remove `acme-editors` from Anna's Secret, the one place her team membership
+lives. Then wait for Dex to restart with the change:
 
 ```bash
-oc -n keycloak exec -i deploy/keycloak -- bash -s <<'EOF'
-K=/opt/keycloak/bin/kcadm.sh
-$K config credentials --server http://localhost:8080 --realm master \
-  --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" >/dev/null
-uid=$($K get users -r tenants -q username=anna -q exact=true --fields id --format csv --noquotes)
-gid=$($K get groups -r tenants -q search=acme-editors -q exact=true --fields id --format csv --noquotes)
-$K delete "users/$uid/groups/$gid" -r tenants
-echo "anna removed from acme-editors"
-EOF
+oc -n multi-tenant-operator set data secret/dex-user-anna groups-
+sleep 15
+until oc -n multi-tenant-operator rollout status deploy/dex --timeout=300s 2>/dev/null; do sleep 5; done
+```
+
+```
+secret/dex-user-anna data updated
+deployment "dex" successfully rolled out
 ```
 
 Sessions Anna already has last until they expire. A leaver process ends them
@@ -418,21 +395,25 @@ Now Anna signs in again, in a new private window:
   `acme-editors` because her groups claim no longer has it.
 - **Vault:** her sign-in to `acme` as `sso.acme.editor` is refused.
 
-> 📷 **Screenshot to capture** (`09-openshift-anna-after-move.png`): the OpenShift
-> console signed in as Anna again, after she left `acme-editors`, the Projects
-> page with no projects. **Highlight:** the empty project list.
+![OpenShift console signed in as Anna after she left acme-editors, the Projects page: No Projects found](screenshots/08-openshift-anna-after-move.png)
+
+OpenShift made the group `acme-editors` from the groups claim. With nobody
+left in it, OpenShift deleted it:
 
 ```bash
 oc get group acme-editors
 ```
 
 ```
-NAME           USERS
-acme-editors
+Error from server (NotFound): groups.user.openshift.io "acme-editors" not found
 ```
 
+The role binding from step 5 stays. When someone is in `acme-editors` again,
+OpenShift makes the group again at their next sign-in, and the binding
+applies.
+
 Nobody touched OpenShift's role bindings or Vault's configuration. One
-change in the identity provider, and her access went everywhere.
+change in one place, and her access went everywhere.
 
 ## Clean up
 
@@ -452,22 +433,60 @@ helm upgrade mto-extension-vault-enterprise-bootstrap \
   --version 0.1.0 -n vault-config --reuse-values --set parent.sso.enabled=false
 oc -n vault-config delete secret vault-oidc-client-secret
 
-# Dex: remove the clients and the connector
-oc delete -f dex-clients.yaml -f dex-connector.yaml
-oc -n multi-tenant-operator delete secret dex-openshift-client dex-vault-client keycloak-connector-config
+# Dex: remove the clients and the people
+oc delete -f dex-clients.yaml -f dex-people.yaml
+oc -n multi-tenant-operator delete secret dex-openshift-client dex-vault-client dex-user-anna dex-user-ben
 
-# The tenants as they were, and Keycloak
+# The tenants as they were
 oc apply -f ../../02-try-it-tenants-and-vault-enterprise/examples/tenants.yaml
-oc delete project keycloak
 ```
+
+## Use your own identity provider
+
+In this tutorial, Dex keeps the people. That's for learning: their password
+hashes are in Secrets, and anyone who can edit Secrets in
+`multi-tenant-operator` can change their groups. In production, people and
+groups stay in your company's identity provider, and everything else in this
+tutorial stays as it is. There are two ways to connect it.
+
+**Connect Dex to it.** One `Connector` takes the place of the local people.
+Dex connects to Red Hat build of Keycloak, Microsoft Entra ID, Okta, LDAP,
+GitHub and others. [Dex's connector documentation](https://dexidp.io/docs/connectors/)
+gives the settings for each. For an OpenID Connect provider, the connection
+details go in a Secret, and [`dex-connector.yaml`](examples/dex-connector.yaml)
+points Dex at it:
+
+```bash
+cat > connector.json <<EOF
+{"issuer":"<your identity provider's issuer URL>","clientID":"<client ID>","clientSecret":"<client secret>",
+ "redirectURI":"$DEX_ISSUER/callback","scopes":["openid","profile","email"],
+ "insecureEnableGroups":true}
+EOF
+oc -n multi-tenant-operator create secret generic company-connector-config --from-file=config=connector.json
+rm connector.json
+oc apply -f dex-connector.yaml
+```
+
+- **`insecureEnableGroups`** passes each person's groups from your identity
+  provider on to every tool. Despite its name, it's the standard Dex
+  setting for that.
+- **The group names must match** the ones your tenants use, such as
+  `acme-editors`.
+
+Dex then offers **Company sign-in** on its sign-in page.
+
+**Or connect each tool to it directly.** OpenShift and Vault both accept any
+OpenID Connect provider. In step 4 and step 6, use your identity provider's
+issuer in place of Dex's. Each tool then needs its own client in your
+identity provider, with the groups claim set up for each.
 
 ## What you built
 
-One identity provider holds who is in which team. Multi-Tenant Operator's
-Dex connects it to every tool. The tenant decides what each group means:
+Dex, which ships with Multi-Tenant Operator, signs people in to every tool
+and sends their groups. The tenant decides what each group means:
 `acme-editors` edits `acme`'s projects in OpenShift and `acme`'s secrets in
 Vault, and nothing else. Joiners, movers and leavers are one change in one
-place.
+place: here, a person's Secret; in production, your identity provider.
 
 Each new tool joins the same way: a `Client` for Dex, and the same groups.
 That's how the next tools in this series, such as Argo CD and Grafana, will

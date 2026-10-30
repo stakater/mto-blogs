@@ -203,9 +203,7 @@ with editor rights in `acme` only.
 
 In the OpenShift console, Anna sees her team's projects, and no others.
 
-> 📷 **Screenshot to capture** (`04-openshift-anna-projects.png`): the OpenShift
-> console signed in as Anna, the Projects page, with only `acme-shop` in the list.
-> **Highlight:** the row `acme-shop`.
+![OpenShift console signed in as Anna, the Projects page: only acme-shop](screenshots/03-openshift-anna-projects.png)
 
 In Vault, she sees her team's secrets, with the editor's "Create new
 version" button:
@@ -238,11 +236,12 @@ because none of her groups belong to that tenant.
 
 The tutorial,
 [Hands-on: one login for tenant members](https://github.com/stakater/mto-blogs/tree/main/04-try-it-one-login-for-tenant-members),
-continues on the cluster from the first tutorial. It runs a Keycloak as a
-stand-in for your company's identity provider, connects it to the Dex that
-ships with Multi-Tenant Operator, and signs Anna in to OpenShift and Vault.
-Then it moves her out of the team and shows her access go. It still fits
-the free Basic edition's two tenants.
+continues on the cluster from the first tutorial. It keeps two people and
+their groups in the Dex that ships with Multi-Tenant Operator, as a
+stand-in for your company's identity provider, and signs Anna in to
+OpenShift and Vault. Then it moves her out of the team and shows her access
+go, and it shows how Dex connects to the identity provider you already
+have. It still fits the free Basic edition's two tenants.
 
 ## What's next
 
