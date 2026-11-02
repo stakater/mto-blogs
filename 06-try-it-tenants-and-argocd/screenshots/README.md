@@ -7,13 +7,18 @@ steps do. Each file replaces the slot that names it in [post.md](../post.md).
 **Highlight** is what the capture marks on the screen, following the
 [screenshot guideline](../../docs/guidelines/screenshots.md#highlights).
 
+01 to 05 were captured on 2026-11-02, on OpenShift 4.21.32 (hosted control
+planes) with OpenShift GitOps 1.22.2 (Argo CD v3.5.5), Multi-Tenant Operator
+1.10.2 and the extension's chart 0.8.0, at 2880×1800. 06 to 10 wait for the
+GitOps repositories that step 6 uses.
+
 | File | Step | Shows | Highlight | Status |
 |---|---|---|---|---|
-| `01-operatorhub-gitops.png` | 2 | Software Catalog search for "gitops": the Red Hat OpenShift GitOps tile | The Red Hat OpenShift GitOps tile | To capture |
-| `02-mto-console-tenants.png` | 5 | Multi-Tenant Operator console, Tenants page: `acme` and `globex` | The rows `acme` and `globex` | To capture |
-| `03-mto-console-namespaces.png` | 5 | Multi-Tenant Operator console, Namespaces page: `acme-dev`, `acme-argocd` under `acme`; `globex-dev`, `globex-argocd` under `globex` | The four namespaces, with their tenant | To capture |
-| `04-argocd-projects.png` | 5 | Argo CD as an administrator, Settings → Projects: `acme`, `default`, `globex` | The projects `acme` and `globex` | To capture |
-| `05-argocd-login.png` | 6 | The Argo CD sign-in page | The "Log in via OpenShift" button | To capture |
+| `01-operatorhub-gitops.png` | 2 | Software Catalog search for "gitops": the Red Hat OpenShift GitOps tile | The Red Hat OpenShift GitOps tile | Captured, before the install |
+| `02-mto-console-tenants.png` | 5 | Multi-Tenant Operator console, Tenants page: `acme` and `globex` | The rows `acme` and `globex` | Captured |
+| `03-mto-console-namespaces.png` | 5 | Multi-Tenant Operator console, Namespaces page: `acme-dev`, `acme-argocd` under `acme`; `globex-dev`, `globex-argocd` under `globex` | The four namespaces, with their tenant | Captured. The table is sorted by the Tenant column, so the four namespaces are at the top |
+| `04-argocd-projects.png` | 5 | Argo CD as an administrator, Settings → Projects: `acme`, `default`, `globex` | The projects `acme` and `globex` | Captured. The administrator must be in the group `cluster-admins` to see the projects |
+| `05-argocd-login.png` | 6 | The Argo CD sign-in page | The "Log in via OpenShift" button | Captured |
 | `06-argocd-anna-apps.png` | 6 | Argo CD as Anna: the Application `hello` in AppProject `acme`, Synced and Healthy | The Application `hello`, and its AppProject `acme` | To capture |
 | `07-argocd-hello-synced.png` | 6 | Argo CD as Anna: `hello` opened, its resource tree healthy | The Synced and Healthy status | To capture |
 | `08-argocd-refused.png` | 7 | Argo CD as Anna: `wrong-destination`, with the error that `globex-dev` isn't an allowed destination | The error message | To capture |

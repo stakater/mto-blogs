@@ -101,8 +101,7 @@ else to configure.
 In **Ecosystem → Software Catalog**, search for **gitops** and install
 **Red Hat OpenShift GitOps** with the defaults.
 
-> 📷 **Screenshot to capture** (`01-operatorhub-gitops.png`): Software Catalog search for "gitops": the Red Hat OpenShift GitOps tile.
-> **Highlight:** the Red Hat OpenShift GitOps tile.
+![Software Catalog search for gitops: the Red Hat OpenShift GitOps tile, highlighted](screenshots/01-operatorhub-gitops.png)
 
 The operator creates an Argo CD instance in `openshift-gitops`. Wait for it:
 
@@ -266,11 +265,9 @@ oc -n multi-tenant-operator get secret tenant-operator-console-credentials \
   -o jsonpath='{.data.passwordPlainText}' | base64 -d; echo
 ```
 
-> 📷 **Screenshot to capture** (`02-mto-console-tenants.png`): The Multi-Tenant Operator console, Tenants page, listing acme and globex.
-> **Highlight:** the rows `acme` and `globex`.
+![Multi-Tenant Operator console, Tenants page: acme and globex, highlighted](screenshots/02-mto-console-tenants.png)
 
-> 📷 **Screenshot to capture** (`03-mto-console-namespaces.png`): The Multi-Tenant Operator console, Namespaces page: acme-dev and acme-argocd under tenant acme, globex-dev and globex-argocd under tenant globex.
-> **Highlight:** the four namespaces, with their tenant.
+![Multi-Tenant Operator console, Namespaces page sorted by tenant: acme-argocd and acme-dev under acme, globex-argocd and globex-dev under globex](screenshots/03-mto-console-namespaces.png)
 
 **In production,** connect your identity provider and delete this built-in
 account: anyone who can read Secrets in `multi-tenant-operator` can read its
@@ -284,8 +281,7 @@ Projects**. Open Argo CD and sign in with **Log in via OpenShift**, as your
 echo "https://$(oc -n openshift-gitops get route openshift-gitops-server -o jsonpath='{.spec.host}')"
 ```
 
-> 📷 **Screenshot to capture** (`04-argocd-projects.png`): Argo CD as an administrator, Settings → Projects: acme, default and globex.
-> **Highlight:** the AppProjects `acme` and `globex`.
+![Argo CD as an administrator, Settings, Projects: acme, default and globex, with acme and globex highlighted](screenshots/04-argocd-projects.png)
 
 **In production,** Tenants belong to the platform team: a team can't edit its
 own. On most platforms they live in Git, like the rest of the platform's
@@ -305,8 +301,7 @@ Anna signs in to Argo CD with her OpenShift account. In the private browser
 window, open Argo CD, choose **Log in via OpenShift**, then the **tutorial**
 identity provider, and sign in as `anna`.
 
-> 📷 **Screenshot to capture** (`05-argocd-login.png`): The Argo CD sign-in page, with "Log in via OpenShift".
-> **Highlight:** the "Log in via OpenShift" button.
+![Argo CD sign-in page, with the Log in via OpenShift button highlighted](screenshots/05-argocd-login.png)
 
 She has no Applications yet. She creates one from her terminal, in her
 team's own namespace for Applications. Give her a separate login, so your
