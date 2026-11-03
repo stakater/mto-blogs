@@ -2,7 +2,8 @@
 # edition's limit, and enough to see isolation. Each names an owners group and
 # a viewers group; who is in them is managed outside the tenant. Each gets a namespace for its
 # workloads (<tenant>-dev) and one for its Argo CD Applications
-# (<tenant>-argocd).
+# (<tenant>-argocd). The label on <tenant>-dev lets OpenShift GitOps deploy
+# there: its Argo CD can only read the other namespaces on the cluster.
 #
 # Every tenant names a Quota. This one only caps the number of pods.
 apiVersion: tenantoperator.stakater.com/v1beta1
@@ -31,6 +32,11 @@ spec:
     withTenantPrefix:
       - dev
       - argocd
+    metadata:
+      specific:
+        - namespaces: [acme-dev]
+          labels:
+            argocd.argoproj.io/managed-by: openshift-gitops
 ---
 apiVersion: tenantoperator.stakater.com/v1beta3
 kind: Tenant
@@ -49,3 +55,8 @@ spec:
     withTenantPrefix:
       - dev
       - argocd
+    metadata:
+      specific:
+        - namespaces: [globex-dev]
+          labels:
+            argocd.argoproj.io/managed-by: openshift-gitops

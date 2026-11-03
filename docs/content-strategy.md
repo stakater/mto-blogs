@@ -75,7 +75,7 @@ topic says why it is separate from the one before.
 |---|---|---|---|---|---|
 | 1 | Tenants carried into Vault Enterprise, for apps | [post 1](../01-tenants-and-vault-enterprise/post.md) | [post 2](../02-try-it-tenants-and-vault-enterprise/post.md) | [plan](../02-try-it-tenants-and-vault-enterprise/video/plan.md) | Tutorial validated on OpenShift 4.22; screenshots partly captured; video planned |
 | 2 | One login for tenant members, on OpenShift and Vault | [post 3](../03-one-login-for-tenant-members/post.md) | [post 4](../04-try-it-one-login-for-tenant-members/post.md) | – | Tutorial validated on OpenShift 4.21; all 8 screenshots captured; no video yet |
-| 3 | Tenants carried into Argo CD | [post 5](../05-tenants-and-argocd/post.md) | [post 6](../06-try-it-tenants-and-argocd/post.md) | [plan](../06-try-it-tenants-and-argocd/video/plan.md) | Drafts, not yet validated; the extension's chart must be made public first |
+| 3 | Tenants carried into Argo CD | [post 5](../05-tenants-and-argocd/post.md) | [post 6](../06-try-it-tenants-and-argocd/post.md) | [plan](../06-try-it-tenants-and-argocd/video/plan.md) | Tutorial validated on OpenShift 4.21; all 11 screenshots captured; the extension's chart must be made public first |
 | 4 | Tenants and Vault Community: a different isolation model | – | – | – | Idea |
 | – | Tenants across several clusters, sharing one Vault | – | – | – | Idea, promised in post 1; needs engineering to confirm and test the approach first |
 | 5 | The same tenant in more tools: Grafana and others | – | – | – | Idea; extensions run today |
