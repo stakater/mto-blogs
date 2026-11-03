@@ -50,7 +50,7 @@ Here's what you'll install:
 |---|---|---|---|
 | Multi-Tenant Operator | 1.10.0 or later | Software Catalog (OperatorHub) | Owns the tenants, and runs Template Operator |
 | Red Hat OpenShift GitOps | 1.22 (Argo CD 3.5) | Software Catalog (OperatorHub) | Argo CD: deploys from Git, and enforces each AppProject |
-| Argo CD extension for Multi-Tenant Operator | 0.7.1 | `oci://ghcr.io/stakater/charts` | Turns each tenant into an AppProject |
+| Argo CD extension for Multi-Tenant Operator | 0.8.0 | `oci://ghcr.io/stakater/charts` | Turns each tenant into an AppProject |
 
 Each tenant deploys from its own Git repository. This tutorial uses two
 small public ones, so you don't need a Git account:
@@ -184,7 +184,7 @@ namespace.
 
 ```bash
 helm upgrade --install mto-extension-argocd \
-  oci://ghcr.io/stakater/charts/mto-extension-argocd --version 0.7.1 \
+  oci://ghcr.io/stakater/charts/mto-extension-argocd --version 0.8.0 \
   -n multi-tenant-operator -f values.yaml \
   --set rbac.serviceAccount.name="$TOP_SA" \
   --set rbac.serviceAccount.namespace="$TOP_NS"

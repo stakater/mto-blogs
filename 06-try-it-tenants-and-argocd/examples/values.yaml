@@ -1,7 +1,7 @@
 # Values for the Argo CD extension for Multi-Tenant Operator, for this
 # tutorial. Install with:
 #   helm upgrade --install mto-extension-argocd \
-#     oci://ghcr.io/stakater/charts/mto-extension-argocd --version 0.7.1 \
+#     oci://ghcr.io/stakater/charts/mto-extension-argocd --version 0.8.0 \
 #     -n multi-tenant-operator -f values.yaml \
 #     --set rbac.serviceAccount.name="$TOP_SA" \
 #     --set rbac.serviceAccount.namespace="$TOP_NS"
