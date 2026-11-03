@@ -214,14 +214,12 @@ namespace.
 Anna, on the `acme` team, signs in to Argo CD with her OpenShift account. She
 sees her team's Applications, and nothing from any other team:
 
-> 📷 **Screenshot to capture** (`06-argocd-anna-apps.png`, from the tutorial): Argo CD as Anna: the Application `hello` in AppProject `acme`, Synced and Healthy.
-> **Highlight:** the Application `hello`, and its AppProject `acme`.
+![Argo CD as Anna: the Application acme-argocd/hello in AppProject acme, Healthy and Synced](screenshots/06-argocd-anna-apps.png)
 
 When she points an Application at another team's namespace, Argo CD refuses
 it and says why:
 
-> 📷 **Screenshot to capture** (`08-argocd-refused.png`, from the tutorial): Argo CD as Anna: an Application targeting `globex-dev`, with the error that the destination isn't permitted in AppProject `acme`.
-> **Highlight:** the error message.
+![Argo CD as Anna: an Application targeting globex-dev, refused because namespace globex-dev doesn't match any allowed destination in project acme](screenshots/08-argocd-refused.png)
 
 ## Guardrails for Argo CD owners
 

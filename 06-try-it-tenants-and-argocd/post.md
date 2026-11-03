@@ -3,8 +3,8 @@
 <!--
 Outlet: Red Hat Developer (tutorial), then the Stakater blog, canonical link back.
 Companion to post 5, "One tenant, from OpenShift to Argo CD", which explains why.
-Screenshots: each "Screenshot to capture" block is a slot, filled during the
-validation run. The full list, with highlights, is in screenshots/README.md.
+Screenshots: captured in the validation run. The full list, with
+highlights, is in screenshots/README.md.
 -->
 
 In [One tenant, from OpenShift to Argo CD](../05-tenants-and-argocd/post.md),
@@ -31,7 +31,9 @@ Allow about 90 minutes.
 
 You need:
 
-- An OpenShift 4 cluster, and `cluster-admin` on it
+- An OpenShift 4 cluster, and `cluster-admin` on it. Give it room for two
+  more operators: one worker with a 32 GB disk ran out of disk space in our
+  run, and two workers were enough.
 - `oc`, `helm` and `htpasswd` on your machine. `htpasswd` comes with macOS;
   on Linux it's in the `httpd-tools` or `apache2-utils` package.
 - A private browser window, for signing in as Anna
@@ -48,7 +50,7 @@ Here's what you'll install:
 |---|---|---|---|
 | Multi-Tenant Operator | 1.10.0 or later | Software Catalog (OperatorHub) | Owns the tenants, and runs Template Operator |
 | Red Hat OpenShift GitOps | 1.22 (Argo CD 3.5) | Software Catalog (OperatorHub) | Argo CD: deploys from Git, and enforces each AppProject |
-| Argo CD extension for Multi-Tenant Operator | 0.7.1 | `oci://ghcr.io/stakater/charts` | Turns each tenant into an AppProject |
+| Argo CD extension for Multi-Tenant Operator | 0.8.0 | `oci://ghcr.io/stakater/charts` | Turns each tenant into an AppProject |
 
 Each tenant deploys from its own Git repository. This tutorial uses two
 small public ones, so you don't need a Git account:
@@ -101,8 +103,7 @@ else to configure.
 In **Ecosystem → Software Catalog**, search for **gitops** and install
 **Red Hat OpenShift GitOps** with the defaults.
 
-> 📷 **Screenshot to capture** (`01-operatorhub-gitops.png`): Software Catalog search for "gitops": the Red Hat OpenShift GitOps tile.
-> **Highlight:** the Red Hat OpenShift GitOps tile.
+![Software Catalog search for gitops: the Red Hat OpenShift GitOps tile, highlighted](screenshots/01-operatorhub-gitops.png)
 
 The operator creates an Argo CD instance in `openshift-gitops`. Wait for it:
 
@@ -162,6 +163,12 @@ echo "anna: $ANNA_PASSWORD   ben: $BEN_PASSWORD   carl: $CARL_PASSWORD"
 
 Note the passwords. You'll sign in as Anna in step 6, and as Carl in step 8.
 
+On a cluster with hosted control planes, `oauth cluster` isn't where sign-in
+is configured, so the patch above changes nothing. Add the `tutorial`
+identity provider to the `HostedCluster` on the management cluster instead,
+under `spec.configuration.oauth.identityProviders`, with the `tutorial-users`
+secret in the `HostedCluster`'s namespace there.
+
 **In production,** people and groups come from your identity provider, not a
 password file. The
 [one-login tutorial](../04-try-it-one-login-for-tenant-members/post.md) in
@@ -177,7 +184,7 @@ namespace.
 
 ```bash
 helm upgrade --install mto-extension-argocd \
-  oci://ghcr.io/stakater/charts/mto-extension-argocd --version 0.7.1 \
+  oci://ghcr.io/stakater/charts/mto-extension-argocd --version 0.8.0 \
   -n multi-tenant-operator -f values.yaml \
   --set rbac.serviceAccount.name="$TOP_SA" \
   --set rbac.serviceAccount.namespace="$TOP_NS"
@@ -196,6 +203,8 @@ other team's code.
 [`tenants.yaml`](examples/tenants.yaml) defines two teams. Each opts in to
 Argo CD with one annotation, names its owners' and viewers' groups, and gets
 two namespaces: one for its workloads, and one for its Argo CD Applications.
+The label on the workload namespace lets OpenShift GitOps deploy there. Its
+Argo CD can only read the other namespaces on the cluster.
 
 ```yaml
 apiVersion: tenantoperator.stakater.com/v1beta3
@@ -215,7 +224,19 @@ spec:
     withTenantPrefix:
       - dev
       - argocd
+    metadata:
+      specific:
+        - namespaces: [acme-dev]
+          labels:
+            argocd.argoproj.io/managed-by: openshift-gitops
 ```
+
+If you followed the [Vault tutorial](../02-try-it-tenants-and-vault-enterprise/post.md)
+or the [one-login tutorial](../04-try-it-one-login-for-tenant-members/post.md)
+on this cluster, it already has tenants named `acme` and `globex`. Applying
+`tenants.yaml` replaces them, and Multi-Tenant Operator deletes `acme-shop`
+and `globex-web` with everything in them. Run their clean-up first, or use
+another cluster.
 
 ```bash
 oc apply -f tenants.yaml
@@ -266,11 +287,9 @@ oc -n multi-tenant-operator get secret tenant-operator-console-credentials \
   -o jsonpath='{.data.passwordPlainText}' | base64 -d; echo
 ```
 
-> 📷 **Screenshot to capture** (`02-mto-console-tenants.png`): The Multi-Tenant Operator console, Tenants page, listing acme and globex.
-> **Highlight:** the rows `acme` and `globex`.
+![Multi-Tenant Operator console, Tenants page: acme and globex, highlighted](screenshots/02-mto-console-tenants.png)
 
-> 📷 **Screenshot to capture** (`03-mto-console-namespaces.png`): The Multi-Tenant Operator console, Namespaces page: acme-dev and acme-argocd under tenant acme, globex-dev and globex-argocd under tenant globex.
-> **Highlight:** the four namespaces, with their tenant.
+![Multi-Tenant Operator console, Namespaces page sorted by tenant: acme-argocd and acme-dev under acme, globex-argocd and globex-dev under globex](screenshots/03-mto-console-namespaces.png)
 
 **In production,** connect your identity provider and delete this built-in
 account: anyone who can read Secrets in `multi-tenant-operator` can read its
@@ -284,8 +303,16 @@ Projects**. Open Argo CD and sign in with **Log in via OpenShift**, as your
 echo "https://$(oc -n openshift-gitops get route openshift-gitops-server -o jsonpath='{.spec.host}')"
 ```
 
-> 📷 **Screenshot to capture** (`04-argocd-projects.png`): Argo CD as an administrator, Settings → Projects: acme, default and globex.
-> **Highlight:** the AppProjects `acme` and `globex`.
+OpenShift GitOps makes the OpenShift group `cluster-admins` Argo CD
+administrators. The `cluster-admin` role alone isn't enough: if Settings →
+Projects is empty, add your user to that group, then sign in again:
+
+```bash
+oc adm groups new cluster-admins "$(oc whoami)" 2>/dev/null \
+  || oc adm groups add-users cluster-admins "$(oc whoami)"
+```
+
+![Argo CD as an administrator, Settings, Projects: acme, default and globex, with acme and globex highlighted](screenshots/04-argocd-projects.png)
 
 **In production,** Tenants belong to the platform team: a team can't edit its
 own. On most platforms they live in Git, like the rest of the platform's
@@ -305,8 +332,7 @@ Anna signs in to Argo CD with her OpenShift account. In the private browser
 window, open Argo CD, choose **Log in via OpenShift**, then the **tutorial**
 identity provider, and sign in as `anna`.
 
-> 📷 **Screenshot to capture** (`05-argocd-login.png`): The Argo CD sign-in page, with "Log in via OpenShift".
-> **Highlight:** the "Log in via OpenShift" button.
+![Argo CD sign-in page, with the Log in via OpenShift button highlighted](screenshots/05-argocd-login.png)
 
 She has no Applications yet. She creates one from her terminal, in her
 team's own namespace for Applications. Give her a separate login, so your
@@ -358,14 +384,19 @@ NAME                     READY   STATUS    RESTARTS   AGE
 hello-6d9c8f7b5d-x2k4p   1/1     Running   0          25s
 ```
 
+The app has a Route. Open it in the browser, and the page says **Hello from
+tenant acme**:
+
+```bash
+echo "https://$(anna -n acme-dev get route hello -o jsonpath='{.spec.host}')"
+```
+
 In Argo CD, Anna now sees her Application, in AppProject `acme`, and nothing
 from any other team:
 
-> 📷 **Screenshot to capture** (`06-argocd-anna-apps.png`): Argo CD as Anna: the Application hello in AppProject acme, Synced and Healthy.
-> **Highlight:** the Application `hello`, and its AppProject `acme`.
+![Argo CD as Anna: the Application acme-argocd/hello in AppProject acme, Healthy and Synced, with its name and project highlighted](screenshots/06-argocd-anna-apps.png)
 
-> 📷 **Screenshot to capture** (`07-argocd-hello-synced.png`): Argo CD as Anna: the Application hello opened, its resource tree with the Deployment, ReplicaSet, Pod and Service, all healthy.
-> **Highlight:** the Synced and Healthy status.
+![Argo CD as Anna: the Application hello opened, Healthy and Synced, its resource tree with the ConfigMap, Service, Deployment, ReplicaSet, Pod and Route](screenshots/07-argocd-hello-synced.png)
 
 **What just happened:** Anna is in `acme-owners`, so Multi-Tenant Operator
 gave her `admin` in acme's namespaces, which is how she could create an
@@ -398,16 +429,15 @@ done
 ```
 wrong-destination: application destination server 'https://kubernetes.default.svc' and namespace 'globex-dev' do not match any of the allowed destinations in project 'acme'
 wrong-repository: application repo https://github.com/stakater/mto-blogs-globex-gitops is not permitted in project 'acme'
-wrong-project: app is not allowed in project "globex", or the project does not exist
+wrong-project: application 'wrong-project' in namespace 'acme-argocd' is not permitted to use project 'globex'
 control-plane: application destination server 'https://kubernetes.default.svc' and namespace 'openshift-gitops' do not match any of the allowed destinations in project 'acme'
-own-quota: one or more synchronization tasks are not valid: resource :ResourceQuota is not permitted in project acme
+own-quota: one or more synchronization tasks are not valid: resource :ResourceQuota is not permitted in project acme. Retrying attempt #3 at 10:51AM.
 ```
 
 Argo CD refuses all five, and deploys none of them. In the Argo CD UI, Anna
 sees why:
 
-> 📷 **Screenshot to capture** (`08-argocd-refused.png`): Argo CD as Anna: the Application wrong-destination, with the error that globex-dev isn't an allowed destination in AppProject acme.
-> **Highlight:** the error message.
+![Argo CD as Anna: the conditions of wrong-destination, with the highlighted error that namespace globex-dev doesn't match any allowed destination in project acme](screenshots/08-argocd-refused.png)
 
 She can't go around Argo CD either: she has no access to globex's namespace
 for Applications, or to Argo CD's own.
@@ -463,8 +493,7 @@ Error from server (Forbidden): applications.argoproj.io "hello" is forbidden: Us
 In a new private window, sign in to Argo CD as `carl`. He sees acme's
 Application, and Argo CD refuses to let him sync or delete it.
 
-> 📷 **Screenshot to capture** (`08b-argocd-carl-viewer.png`): Argo CD as Carl: the Application hello in AppProject acme, with a permission error after trying to sync it.
-> **Highlight:** the Application `hello`, and the permission error.
+![Argo CD as Carl: the Application hello, and the highlighted error after he tried to sync it: permission denied: applications, sync, acme/acme-argocd/hello](screenshots/08b-argocd-carl-viewer.png)
 
 Each of the tenant's groups gets one level of access in its AppProject, least
 privilege by default:
@@ -508,11 +537,13 @@ every AppProject they touch, and remembering to undo it.
 
 `acme` needs a production namespace. In practice the team would ask for it
 with a pull request to the platform's repository. Here you add it to the
-tenant directly, as a platform administrator:
+tenant directly, as a platform administrator, with the label that lets Argo
+CD deploy there:
 
 ```bash
-oc patch tenant acme --type json \
-  -p '[{"op":"add","path":"/spec/namespaces/withTenantPrefix/-","value":"prod"}]'
+oc patch tenant acme --type json -p '[
+  {"op":"add","path":"/spec/namespaces/withTenantPrefix/-","value":"prod"},
+  {"op":"add","path":"/spec/namespaces/metadata/specific/0/namespaces/-","value":"acme-prod"}]'
 sleep 20
 oc -n openshift-gitops get appproject acme -o jsonpath='{.spec.destinations[*].namespace}{"\n"}'
 ```
@@ -521,8 +552,7 @@ oc -n openshift-gitops get appproject acme -o jsonpath='{.spec.destinations[*].n
 acme-argocd acme-dev acme-prod
 ```
 
-> 📷 **Screenshot to capture** (`09-argocd-project-destinations.png`): Argo CD as an administrator, Settings → Projects → acme: the destinations acme-argocd, acme-dev and acme-prod.
-> **Highlight:** the destination `acme-prod`.
+![Argo CD as an administrator, Settings, Projects, acme: the destinations acme-argocd, acme-dev and acme-prod, with acme-prod highlighted](screenshots/09-argocd-project-destinations.png)
 
 Anna deploys to production straight away, with
 [`acme-prod-app.yaml`](examples/acme-prod-app.yaml):
@@ -563,8 +593,7 @@ Release freeze
 In Argo CD, Anna tries to sync `hello-prod`, and the freeze blocks it.
 `hello`, in `acme-dev`, still syncs as usual.
 
-> 📷 **Screenshot to capture** (`10-argocd-sync-window.png`): Argo CD as Anna: hello-prod, with its sync blocked by the "Release freeze" sync window.
-> **Highlight:** the sync window and its message.
+![Argo CD as Anna: hello-prod, with an active deny sync window, and the highlighted error after she tried to sync it: blocked by sync window](screenshots/10-argocd-sync-window.png)
 
 The release is out. Lift the freeze:
 
@@ -589,8 +618,9 @@ from the tenant:
 
 ```bash
 anna delete -f acme-prod-app.yaml
-oc patch tenant acme --type json \
-  -p '[{"op":"remove","path":"/spec/namespaces/withTenantPrefix/2"}]'
+oc patch tenant acme --type json -p '[
+  {"op":"remove","path":"/spec/namespaces/withTenantPrefix/2"},
+  {"op":"remove","path":"/spec/namespaces/metadata/specific/0/namespaces/1"}]'
 sleep 20
 oc -n openshift-gitops get appproject acme -o jsonpath='{.spec.destinations[*].namespace}{"\n"}'
 ```
@@ -635,7 +665,7 @@ oc -n openshift-gitops patch appproject acme --type json \
 ```
 
 ```
-Error from server (Forbidden): admission webhook "..." denied the request: ...
+Error from server (Forbidden): admission webhook "sync-enforcement.templates.v2.stakater.com" denied the request: resource is managed by sync-enabled TemplateInstance multi-tenant-operator/mto-argocd-tenant-acme; modifications to enforced fields are not allowed
 ```
 
 **What just happened:** the AppProject belongs to the tenant. Template Operator
