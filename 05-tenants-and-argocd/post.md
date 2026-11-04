@@ -133,6 +133,7 @@ spec:
     withTenantPrefix:
       - dev
       - prod
+      - argocd
 ```
 
 Within moments, Argo CD has an AppProject `acme`, built from that tenant and
@@ -184,7 +185,7 @@ sequenceDiagram
     participant ArgoCD as OpenShift GitOps (Argo CD)
 
     Admin->>MTO: create Tenant "acme", opted in
-    MTO->>MTO: create acme-dev and acme-argocd
+    MTO->>MTO: create acme-dev, acme-prod and acme-argocd
     TO->>ArgoCD: AppProject "acme": destinations, repository, roles
     Anna->>ArgoCD: Application in acme-argocd, AppProject acme, into acme-dev
     ArgoCD->>ArgoCD: allowed by AppProject acme
@@ -271,7 +272,7 @@ each inside its own AppProject, in about 90 minutes.
 
 ## What's next
 
-Argo CD deploys what a team builds. Next in this series, the same tenant
+Argo CD deploys what a team builds. Later in this series, the same tenant
 follows the team into the tools that watch what it runs.
 
 ## About Multi-Tenant Operator

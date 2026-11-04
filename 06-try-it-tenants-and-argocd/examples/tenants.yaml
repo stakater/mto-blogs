@@ -3,9 +3,10 @@
 # a viewers group; who is in them is managed outside the tenant. Each gets a namespace for its
 # workloads (<tenant>-dev) and one for its Argo CD Applications
 # (<tenant>-argocd). The label on <tenant>-dev lets OpenShift GitOps deploy
-# there: its Argo CD can only read the other namespaces on the cluster.
+# there: without it, the default Argo CD can only read a namespace.
 #
-# Every tenant names a Quota. This one only caps the number of pods.
+# Every tenant names a Quota. This one only caps the number of pods, at 10
+# per tenant.
 apiVersion: tenantoperator.stakater.com/v1beta1
 kind: Quota
 metadata:

@@ -25,7 +25,8 @@ By the end you'll have:
   release freeze for one team, and a team leaving Argo CD, each handled with
   one change and no edit to any AppProject
 
-Allow about 90 minutes.
+Allow about 90 minutes. Validated on OpenShift 4.21, with OpenShift GitOps
+1.22.
 
 ## Before you start
 
@@ -34,8 +35,8 @@ You need:
 - An OpenShift 4 cluster, and `cluster-admin` on it. Give it room for two
   more operators: one worker with a 32 GB disk ran out of disk space in our
   run, and two workers were enough.
-- `oc`, `helm` and `htpasswd` on your machine. `htpasswd` comes with macOS;
-  on Linux it's in the `httpd-tools` or `apache2-utils` package.
+- `oc`, `helm`, `openssl` and `htpasswd` on your machine. `htpasswd` comes
+  with macOS; on Linux it's in the `httpd-tools` or `apache2-utils` package.
 - A private browser window, for signing in as Anna
 - The example files:
 
@@ -105,10 +106,16 @@ In **Ecosystem → Software Catalog**, search for **gitops** and install
 
 ![Software Catalog search for gitops: the Red Hat OpenShift GitOps tile, highlighted](screenshots/01-operatorhub-gitops.png)
 
-The operator creates an Argo CD instance in `openshift-gitops`. Wait for it:
+The operator creates an Argo CD instance in `openshift-gitops`. Wait until
+it exists, then until it's available:
 
 ```bash
+until oc -n openshift-gitops get deploy/openshift-gitops-server >/dev/null 2>&1; do sleep 10; done
 oc -n openshift-gitops wait deploy/openshift-gitops-server --for=condition=Available --timeout=600s
+```
+
+```
+deployment.apps/openshift-gitops-server condition met
 ```
 
 By default, Argo CD reads Applications only from its own namespace. Let it
@@ -200,11 +207,12 @@ other team's code.
 
 ## Step 5: Create two tenants
 
-[`tenants.yaml`](examples/tenants.yaml) defines two teams. Each opts in to
+[`tenants.yaml`](examples/tenants.yaml) defines two teams, and the Quota
+`small` that both use, which caps each team at 10 pods. Each team opts in to
 Argo CD with one annotation, names its owners' and viewers' groups, and gets
 two namespaces: one for its workloads, and one for its Argo CD Applications.
-The label on the workload namespace lets OpenShift GitOps deploy there. Its
-Argo CD can only read the other namespaces on the cluster.
+The label on the workload namespace lets OpenShift GitOps deploy there.
+Without it, the default Argo CD can only read a namespace.
 
 ```yaml
 apiVersion: tenantoperator.stakater.com/v1beta3
@@ -718,6 +726,13 @@ Here's everything you did, and what it took care of:
 | Asked for a release freeze, then lifted it | Added the sync window to that team's AppProject, then removed it | Edit one AppProject, and remember to undo it |
 | Removed a namespace; took a team out of Argo CD | Removed the destination; released the AppProject | Find and clean every reference |
 | Edited an AppProject by hand | Refused it | Notice the drift, if anyone ever does |
+
+Two things were left out on purpose, to keep the tutorial short. Argo CD can
+sync as a service account in the team's own namespace, so a sync can only do
+what the team itself could: that's sync impersonation, beta in Argo CD 3.5
+and off by default. And teams can keep ApplicationSets, not only
+Applications, in their own namespace, with a few more Argo CD settings to
+keep them safe. The extension supports both.
 
 The free edition stops at two tenants. When a third team arrives, that's
 where Multi-Tenant Operator Enterprise comes in.
