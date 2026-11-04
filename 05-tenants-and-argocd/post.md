@@ -147,8 +147,8 @@ kept in step with it:
 | Write a role and policy per access level | Owner, edit and view roles, least privilege, bound to the tenant's owners, editors and viewers |
 | Change roles when people join, move or leave | Nothing to change: the roles name the tenant's groups, so a group change is enough |
 | Keep Argo CD's own namespace out of reach | Never a destination, for any tenant |
-| Keep teams from deploying what the platform owns | Kinds such as `ResourceQuota` denied in every AppProject |
-| Hand-edit one team's AppProject for an exception | An annotation on that team's tenant: a sync window, an extra repository, extra kinds. Removed the same way. |
+| Keep teams from deploying what the platform owns | Kinds such as `ResourceQuota`, listed once in the extension's settings, denied in every AppProject |
+| Hand-edit one team's AppProject for an exception | An annotation on that team's tenant: a sync window, its own list of repositories, extra kinds. Removed the same way. |
 | Clean up when a namespace or a team goes | The destination is removed; a team leaving Argo CD has its AppProject released, not deleted |
 | Keep it all right as the team changes | Re-rendered on every change to the tenant or its namespaces. A hand edit is refused. |
 
@@ -231,10 +231,18 @@ answers:
   deploys into Argo CD's namespace can create AppProjects, Applications and
   repository credentials for every team, which amounts to Argo CD admin. No
   tenant's AppProject ever lists it, even if someone labels it for a tenant.
-- **Roles are least privilege.** Owners manage their team's Applications.
-  Editors can sync and update them, but not create, delete or override them.
-  Viewers can only look. No role gets Argo CD's web terminal or can register
-  a cluster, unless you switch that on.
+  The one setting that allows it exists for migrations, and is off.
+- **Roles are least privilege.** In Argo CD, owners manage their team's
+  Applications. Editors can sync and update them, but not create, delete or
+  override them. Viewers can only look. No role gets Argo CD's web terminal
+  or can register a cluster, unless you switch that on. In the team's
+  namespace for Applications, the team's OpenShift roles also apply, so
+  owners and editors can create Applications there, for their own
+  AppProject only.
+- **The tenant is the control point.** Whoever can edit a Tenant, its
+  annotations included, decides what that team can do in Argo CD. Whoever
+  can create Template Operator templates can write AppProjects directly. Keep
+  both with the platform team.
 - **Teams stay inside their own boundary.** A team's AppProject lists only its
   own namespaces and its own repositories, and Applications in its own
   namespace can only use its own AppProject.
@@ -244,8 +252,8 @@ answers:
   own; every other tenant's AppProject still renders. Taking a tenant out of
   Argo CD releases its AppProject rather than deleting it.
 
-These are covered by the extension's tests, on upstream Argo CD 3.5. The
-tutorial runs the same checks on OpenShift GitOps 1.22.
+The extension's tests cover these on upstream Argo CD 3.5, and the tutorial
+shows most of them on OpenShift GitOps 1.22.
 
 Two things are worth agreeing before production. Repositories come from a
 pattern, so give each tenant its own, such as `{{ tenant }}-gitops`: one
@@ -269,6 +277,9 @@ The companion tutorial,
 [Hands-on: tenants on OpenShift, carried into Argo CD](https://github.com/stakater/mto-blogs/tree/main/06-try-it-tenants-and-argocd),
 takes you from an OpenShift cluster to two teams deploying with Argo CD,
 each inside its own AppProject, in about 90 minutes.
+
+Today, a team's AppProject covers the cluster that Argo CD runs on. Teams
+that deploy across several clusters aren't supported yet.
 
 ## What's next
 

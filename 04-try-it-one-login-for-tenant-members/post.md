@@ -4,9 +4,8 @@
 Outlet: Red Hat Developer (tutorial), then the Stakater blog, canonical link back.
 Companion to post 3, "One login, every tool", which explains why.
 Continues on the cluster from post 2.
-Screenshots: each "Screenshot to capture" line is a slot, filled during the validation run.
-Its "Highlight" line says what the capture marks. The full list, with highlights, is in
-screenshots/README.md.
+Screenshots: captured in the validation run. The full list, with
+highlights, is in screenshots/README.md.
 -->
 
 In [One login, every tool](../03-one-login-for-tenant-members/post.md), we
@@ -66,19 +65,24 @@ Here's what you'll set up:
 | The tenants | – | The first tutorial | Name the groups that may use them |
 | The Vault Enterprise extension | 0.1.0 | Installed in the first tutorial | Gives each tenant a Vault sign-in, one role per access level |
 
+Dex runs while Multi-Tenant Operator's console is switched on, as it is
+from the first tutorial. Keep it on: switching the console off removes Dex,
+and every sign-in through it.
+
 ## Step 1: Collect the addresses
 
 Every piece needs to know where the others are:
 
 ```bash
 DEX_ISSUER=$(oc -n multi-tenant-operator get dexconfig dex-operator-config -o jsonpath='{.spec.issuer}')
-OAUTH_HOST=$(oc -n openshift-authentication get route oauth-openshift -o jsonpath='{.spec.host}')
+OAUTH_HOST=$(oc get --raw /.well-known/oauth-authorization-server | sed -n 's|.*"issuer": *"https://\([^:"/]*\).*|\1|p')
 VAULT_UI_HOST=$(oc -n vault get route vault-ui -o jsonpath='{.spec.host}')
 echo "$DEX_ISSUER  $OAUTH_HOST  $VAULT_UI_HOST"
 ```
 
 `DEX_ISSUER` is the address of the Dex that Multi-Tenant Operator runs for
-its own console.
+its own console. `OAUTH_HOST` is OpenShift's sign-in service, read from the
+cluster's own OAuth address, which also works with hosted control planes.
 
 Check whether your cluster's router certificate is trusted by public
 certificate authorities. On most managed clusters it is:
@@ -211,7 +215,18 @@ sleep 30   # give the rollout time to start
 oc wait clusteroperator authentication --for=condition=Progressing=False --timeout=600s
 ```
 
+```
+clusteroperator.config.openshift.io/authentication condition met
+```
+
 Your existing logins, such as `kubeadmin`, keep working alongside it.
+
+On a cluster with hosted control planes, `oauth cluster` isn't where sign-in
+is configured, so the patch above changes nothing. Add the `tenants`
+identity provider to the `HostedCluster` on the management cluster instead,
+under `spec.configuration.oauth.identityProviders`, with the
+`dex-openshift-client` secret, and the `ingress-ca` config map if you made
+one, in the `HostedCluster`'s namespace there.
 
 ## Step 5: Let the tenants name their groups
 
@@ -415,32 +430,6 @@ applies.
 Nobody touched OpenShift's role bindings or Vault's configuration. One
 change in one place, and her access went everywhere.
 
-## Clean up
-
-To undo this tutorial and return to where the first one ended:
-
-```bash
-# OpenShift: remove the "tenants" identity provider
-IDX=$(( $(oc get oauth cluster -o jsonpath='{range .spec.identityProviders[*]}{.name}{"\n"}{end}' \
-  | grep -n -x tenants | cut -d: -f1) - 1 ))
-oc patch oauth cluster --type json -p "[{\"op\":\"remove\",\"path\":\"/spec/identityProviders/$IDX\"}]"
-oc -n openshift-config delete secret dex-openshift-client
-oc -n openshift-config delete configmap ingress-ca --ignore-not-found
-
-# Vault: turn sign-in for people off again
-helm upgrade mto-extension-vault-enterprise-bootstrap \
-  oci://ghcr.io/stakater/charts/mto-extension-vault-enterprise-bootstrap \
-  --version 0.1.0 -n vault-config --reuse-values --set parent.sso.enabled=false
-oc -n vault-config delete secret vault-oidc-client-secret
-
-# Dex: remove the clients and the people
-oc delete -f dex-clients.yaml -f dex-people.yaml
-oc -n multi-tenant-operator delete secret dex-openshift-client dex-vault-client dex-user-anna dex-user-ben
-
-# The tenants as they were
-oc apply -f ../../02-try-it-tenants-and-vault-enterprise/examples/tenants.yaml
-```
-
 ## Use your own identity provider
 
 In this tutorial, Dex keeps the people. That's for learning: their password
@@ -480,6 +469,43 @@ OpenID Connect provider. In step 4 and step 6, use your identity provider's
 issuer in place of Dex's. Each tool then needs its own client in your
 identity provider, with the groups claim set up for each.
 
+## Clean up
+
+To undo this tutorial and return to where the first one ended:
+
+```bash
+# OpenShift: remove the "tenants" identity provider
+IDX=$(( $(oc get oauth cluster -o jsonpath='{range .spec.identityProviders[*]}{.name}{"\n"}{end}' \
+  | grep -n -x tenants | cut -d: -f1) - 1 ))
+oc patch oauth cluster --type json -p "[{\"op\":\"remove\",\"path\":\"/spec/identityProviders/$IDX\"}]"
+oc -n openshift-config delete secret dex-openshift-client
+oc -n openshift-config delete configmap ingress-ca --ignore-not-found
+
+# OpenShift: Anna's user and identity, made when she signed in
+oc delete user anna@example.com
+oc get identities -o name | grep '/tenants:' | xargs -r oc delete
+
+# Vault: turn sign-in for people off again
+helm upgrade mto-extension-vault-enterprise-bootstrap \
+  oci://ghcr.io/stakater/charts/mto-extension-vault-enterprise-bootstrap \
+  --version 0.1.0 -n vault-config --reuse-values --set parent.sso.enabled=false
+oc -n vault-config delete secret vault-oidc-client-secret
+
+# Dex: remove the clients and the people
+oc delete -f dex-clients.yaml -f dex-people.yaml
+oc -n multi-tenant-operator delete secret dex-openshift-client dex-vault-client dex-user-anna dex-user-ben
+
+# if you connected your own identity provider:
+# oc delete -f dex-connector.yaml
+# oc -n multi-tenant-operator delete secret company-connector-config
+
+# The tenants as they were
+oc apply -f ../../02-try-it-tenants-and-vault-enterprise/examples/tenants.yaml
+```
+
+On a cluster with hosted control planes, remove the `tenants` identity
+provider from the `HostedCluster` instead, where you added it in step 4.
+
 ## What you built
 
 Dex, which ships with Multi-Tenant Operator, signs people in to every tool
@@ -490,8 +516,7 @@ place: here, a person's Secret; in production, your identity provider.
 
 Each new tool joins the same way, and gets the same groups: as a `Client`
 for Dex, or through OpenShift's sign-in, which now goes through Dex. That's
-how the next tools in this series, such as Argo CD and Grafana, will follow
-the tenant too.
+how other tools can follow the tenant too.
 
 You're still on the free edition's two tenants. When a third team arrives,
 that's where Multi-Tenant Operator Enterprise comes in.

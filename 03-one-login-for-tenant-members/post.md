@@ -31,11 +31,12 @@ tool: OpenShift, Vault, and the Multi-Tenant Operator console.
 
 - what giving one person access to one team costs today, across OpenShift
   and Vault
-- the idea: identity stays in your identity provider, and the tenant decides
-  what a group means everywhere
+- the idea: identity stays in your identity provider, the tenant decides
+  what a group means everywhere, and joining, moving and leaving become one
+  change
 - how Multi-Tenant Operator connects your identity provider to every tool,
   through the Dex it already runs
-- what happens when people join, move and leave
+- what Anna sees in OpenShift and Vault
 - the guardrails to agree with your identity and security teams
 
 **Who it's for:** platform engineers and architects running OpenShift with
@@ -93,8 +94,9 @@ about. Platform teams end up in familiar places:
 The fix is to keep each decision in exactly one place.
 
 - **Who is in which team** stays in your identity provider, as groups. It's
-  already where HR processes, joiners and leavers are handled. Nothing
-  about people is copied into OpenShift or Vault.
+  already where HR processes, joiners and leavers are handled. Nobody
+  copies people into OpenShift or Vault: each tool learns a person's groups
+  when they sign in.
 - **What each group may do** is decided by the tenant. A group name follows
   one pattern, `<tenant>-<level>s`, so `acme-editors` means "editors of
   tenant `acme`", in every tool.
@@ -103,7 +105,7 @@ Then each tool follows the tenant:
 
 | The group | In OpenShift | In Vault |
 |---|---|---|
-| `acme-admins` | `admin` on every `acme` project | `admin` in the `acme` Vault namespace |
+| `acme-admins` | `admin` on every `acme` project | `admin`: read, write and delete the team's secrets |
 | `acme-editors` | `edit` on every `acme` project | `editor`: read and write the team's secrets |
 | `acme-viewers` | `view` on every `acme` project | `viewer`: read, never write |
 | `acme-audit-reads` | nothing | `audit-read`: see which secrets exist, never their values |
@@ -142,6 +144,14 @@ Joining, moving and leaving become one action, in one place:
 
 Nobody touches OpenShift or Vault for any of it.
 
+| By hand, per person and team | With Multi-Tenant Operator |
+|---|---|
+| Create an OpenShift group for each team and level, and add each person | The identity provider's groups arrive when people sign in |
+| Bind each group in every one of the team's projects, again for each new project | The tenant's groups are bound in every project it owns, new ones included |
+| Set up an OIDC login in each team's Vault namespace | The extension sets one up in every tenant's Vault namespace |
+| Write a policy and a login role for each level | One role per level, each bound to its group |
+| Move or remove a person in every tool | One change in the identity provider |
+
 ## How it connects: the Dex that ships with Multi-Tenant Operator
 
 Each tool needs to trust your identity provider and receive Anna's groups.
@@ -150,7 +160,8 @@ new tool means another client, another set of claims to map, and another
 place to update when the identity provider changes.
 
 Multi-Tenant Operator already runs **Dex**, an open source OpenID Connect
-provider, for its own console, and manages it through Kubernetes resources.
+provider, for its own console, while the console is switched on, and
+manages it through Kubernetes resources.
 So Dex becomes the one connection to your identity provider, and every tool
 becomes a client of Dex:
 
@@ -226,17 +237,21 @@ because none of her groups belong to that tenant.
 - **Sessions end on their own clock.** Removing Anna from a group stops her
   next sign-in. Sessions she already has last until they expire: a Vault
   sign-in lasts 15 minutes by default, renewable up to an hour, and an
-  OpenShift session lasts as long as your cluster is configured for. For an immediate cut-off, revoke her sessions
-  as part of your leaver process.
+  OpenShift session lasts as long as your cluster is configured for. For an
+  immediate cut-off, revoke her sessions as part of your leaver process.
 - **Vault stays in charge.** People sign in through Vault's own OIDC method,
   and OpenShift through its own identity provider configuration. Nothing
   goes around either.
+- **Dex runs with the console.** Switching Multi-Tenant Operator's console
+  off removes its Dex, and every sign-in through it. Keep the console on, or
+  connect each tool to your identity provider directly.
 
 ## Try it
 
 The tutorial,
 [Hands-on: one login for tenant members](https://github.com/stakater/mto-blogs/tree/main/04-try-it-one-login-for-tenant-members),
-continues on the cluster from the first tutorial. It keeps two people and
+continues on the cluster from the first tutorial, with Vault Enterprise and
+its license. It keeps two people and
 their groups in the Dex that ships with Multi-Tenant Operator, as a
 stand-in for your company's identity provider, and signs Anna in to
 OpenShift and Vault. Then it moves her out of the team and shows her access
@@ -245,10 +260,9 @@ have. It still fits the free Basic edition's two tenants.
 
 ## What's next
 
-OpenShift and Vault are two tools. A team uses many more: Argo CD to
-deploy, Grafana to watch, a registry for its images. Each of them can follow
-the same tenant and the same groups, through the same Dex. That's where this
-series goes next.
+OpenShift and Vault are two tools. A team uses many more: to deploy, to
+watch what it runs, to store its images. Each of them can follow the same
+tenant and the same groups. That's where this series goes next.
 
 ## About Multi-Tenant Operator
 
