@@ -63,6 +63,17 @@ Each holds a small web server; the same files are in
 The Multi-Tenant Operator Basic edition is free with no expiry, and manages
 up to two tenants. That's exactly what this tutorial uses.
 
+If you followed the [Vault tutorial](../02-try-it-tenants-and-vault-enterprise/post.md)
+or the [one-login tutorial](../04-try-it-one-login-for-tenant-members/post.md)
+on this cluster, run their clean-up first: this tutorial uses the same
+tenant names, `acme` and `globex`. If the namespaces `acme-shop` and
+`globex-web` still exist after it, delete them. Otherwise they become
+destinations of the new tenants:
+
+```bash
+oc delete namespace acme-shop globex-web --ignore-not-found
+```
+
 ## Step 1: Install Multi-Tenant Operator
 
 If you followed the [Vault tutorial](../02-try-it-tenants-and-vault-enterprise/post.md)
@@ -74,9 +85,11 @@ versions, **Operators → OperatorHub**), search for **multi tenant**, and
 install **Multi Tenant Operator** with the defaults. It installs into the
 `multi-tenant-operator` namespace.
 
-Switch on the Template Operator it ships with, and its console:
+Switch on the Template Operator it ships with, and its console. The first
+line waits until the operator has made its configuration:
 
 ```bash
+until oc -n multi-tenant-operator get integrationconfig tenant-operator-config >/dev/null 2>&1; do sleep 10; done
 oc -n multi-tenant-operator patch integrationconfig tenant-operator-config --type merge -p '{
   "spec": {
     "components": {"templateOperatorV2": {"mode": "Managed"}, "console": true, "showback": true},
@@ -88,9 +101,18 @@ When Template Operator is running, note the namespace and ServiceAccount it
 runs as. The extension needs both in step 4:
 
 ```bash
+until oc get deploy -A | grep -q template-operator-v2; do sleep 10; done
 oc get deploy -A -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,SA:.spec.template.spec.serviceAccountName \
   | grep template-operator-v2
+```
 
+```
+multi-tenant-operator   template-operator-v2-controller-manager   tenant-operator-template-operator-v2
+```
+
+Set them from the first and last columns:
+
+```bash
 export TOP_NS=<namespace from the output>
 export TOP_SA=<ServiceAccount from the output>
 ```
@@ -168,6 +190,16 @@ oc adm groups new globex-viewers
 echo "anna: $ANNA_PASSWORD   ben: $BEN_PASSWORD   carl: $CARL_PASSWORD"
 ```
 
+The output ends with the four groups and the three passwords:
+
+```
+group.user.openshift.io/acme-owners created
+group.user.openshift.io/acme-viewers created
+group.user.openshift.io/globex-owners created
+group.user.openshift.io/globex-viewers created
+anna: <password>   ben: <password>   carl: <password>
+```
+
 Note the passwords. You'll sign in as Anna in step 6, and as Carl in step 8.
 
 On a cluster with hosted control planes, `oauth cluster` isn't where sign-in
@@ -186,8 +218,9 @@ OpenShift, so it picks up the same groups.
 
 [`values.yaml`](examples/values.yaml) holds the extension's settings: Argo
 CD's namespace, a repository pattern that gives each tenant its own
-repository, and Applications in each tenant's own `<tenant>-argocd`
-namespace.
+repository, Applications in each tenant's own `<tenant>-argocd` namespace,
+and the kinds no tenant may deploy: `ResourceQuota` and `LimitRange`, which
+Multi-Tenant Operator owns.
 
 ```bash
 helm upgrade --install mto-extension-argocd \
@@ -196,6 +229,8 @@ helm upgrade --install mto-extension-argocd \
   --set rbac.serviceAccount.name="$TOP_SA" \
   --set rbac.serviceAccount.namespace="$TOP_NS"
 ```
+
+Helm reports `STATUS: deployed`.
 
 **What just happened:** the extension gave Template Operator one template:
 an AppProject per tenant. It acts only on tenants that opt in with an
@@ -243,8 +278,8 @@ If you followed the [Vault tutorial](../02-try-it-tenants-and-vault-enterprise/p
 or the [one-login tutorial](../04-try-it-one-login-for-tenant-members/post.md)
 on this cluster, it already has tenants named `acme` and `globex`. Applying
 `tenants.yaml` replaces them, and Multi-Tenant Operator deletes `acme-shop`
-and `globex-web` with everything in them. Run their clean-up first, or use
-another cluster.
+and `globex-web` with everything in them. Run their clean-up first, as in
+[Before you start](#before-you-start), or use another cluster.
 
 ```bash
 oc apply -f tenants.yaml
@@ -467,10 +502,11 @@ anna delete -f refused.yaml
 ```
 
 **What just happened:** Argo CD enforced acme's AppProject, and every rule in
-it came from the tenant: its namespaces, its repository, its namespace for
-Applications, Argo CD's namespace left out, and the kinds Multi-Tenant
-Operator owns denied. By hand, every one of those has to be right in every
-team's AppProject, and one mistake in one AppProject is enough.
+it came from the tenant and the extension's settings: its namespaces, its
+repository, its namespace for Applications, Argo CD's namespace left out,
+and the kinds Multi-Tenant Operator owns denied. By hand, every one of those
+has to be right in every team's AppProject, and one mistake in one
+AppProject is enough.
 
 ## Step 8: People join and leave
 
@@ -512,6 +548,11 @@ privilege by default:
 | editors | `acme-edit` | Sync and update Applications, but not create, delete or override them |
 | viewers | `acme-view` | Look, and nothing else |
 
+These are the roles in Argo CD. In the team's namespace for Applications,
+the team's OpenShift roles apply too: owners and editors can create and
+delete Applications there with `oc`, but only in the team's AppProject, and
+viewers can only read them, as Carl found.
+
 No role gets Argo CD's web terminal or can register a cluster, unless the
 platform team switches that on.
 
@@ -527,8 +568,8 @@ Error from server (Forbidden): applications.argoproj.io is forbidden: User "carl
 ```
 
 Argo CD reads Carl's groups when he signs in, so the next time he does, acme
-is gone. To end a session straight away, as a leaver process would, delete
-his OpenShift sessions:
+is gone. An Argo CD session he already has keeps its groups until it
+expires. A leaver process ends his OpenShift sessions straight away:
 
 ```bash
 oc get oauthaccesstokens -o custom-columns=NAME:.metadata.name,USER:.userName --no-headers \
@@ -615,9 +656,10 @@ The output is empty: the window is gone.
 
 **What just happened:** the exception lives on the tenant, and the AppProject
 follows it, in and out. Other per-team exceptions work the same way, as
-annotations on the tenant: an extra repository, extra kinds the team may
-deploy, or keeping its AppProject if the tenant is ever deleted. By hand, an
-exception is an edit to one team's AppProject that nobody remembers to undo.
+annotations on the tenant: its own list of repositories, extra kinds the team may
+deploy, or deleting its AppProject with the tenant, instead of releasing it.
+By hand, an exception is an edit to one team's AppProject that nobody
+remembers to undo.
 
 ## Step 11: The team shrinks, and a team leaves Argo CD
 
@@ -690,11 +732,18 @@ Remove things in this order:
 anna delete -f acme-app.yaml
 rm anna.kubeconfig carl.kubeconfig
 
-# The tenants, then the extension. Their AppProjects are released,
-# not deleted, so delete those last.
-oc delete -f tenants.yaml
-helm uninstall mto-extension-argocd -n multi-tenant-operator
+# The tenants, then their Quota. Multi-Tenant Operator keeps a deleted
+# tenant's namespaces, so delete those too.
+oc delete tenant acme globex
+oc delete quota small
+oc delete namespace acme-dev acme-argocd globex-dev globex-argocd
+
+# The extension. Its AppProjects are released, not deleted, and its RBAC
+# stays after the uninstall, so delete both after it.
+helm uninstall mto-extension-argocd -n multi-tenant-operator --wait
 oc -n openshift-gitops delete appproject acme globex
+oc delete clusterrole,clusterrolebinding -l app.kubernetes.io/instance=mto-extension-argocd
+oc delete role,rolebinding -A -l app.kubernetes.io/instance=mto-extension-argocd
 
 # The three people
 oc delete group acme-owners acme-viewers globex-owners globex-viewers
@@ -704,7 +753,18 @@ IDX=$(( $(oc get oauth cluster -o jsonpath='{range .spec.identityProviders[*]}{.
   | grep -n -x tutorial | cut -d: -f1) - 1 ))
 oc patch oauth cluster --type json -p "[{\"op\":\"remove\",\"path\":\"/spec/identityProviders/$IDX\"}]"
 oc -n openshift-config delete secret tutorial-users
+
+# Argo CD: read Applications from its own namespace only, as before
+oc -n openshift-gitops patch argocd openshift-gitops --type json \
+  -p '[{"op":"remove","path":"/spec/sourceNamespaces"}]'
+
+# if you added yourself to cluster-admins in step 5:
+# oc adm groups remove-users cluster-admins "$(oc whoami)"
 ```
+
+On a cluster with hosted control planes, remove the `tutorial` identity
+provider and its secret from the `HostedCluster`, where you added them in
+step 3.
 
 To remove OpenShift GitOps and Multi-Tenant Operator as well, uninstall them
 from **Installed Operators**.
@@ -720,7 +780,7 @@ Here's everything you did, and what it took care of:
 | You did | Multi-Tenant Operator did | By hand, for every team |
 |---|---|---|
 | Opted a tenant in, with one annotation | Created its AppProject: its namespaces, its repository, roles for its groups, its namespace for Applications | Write the AppProject, its roles and its policies |
-| Nothing | Kept Argo CD's own namespace and the kinds Multi-Tenant Operator owns out of every AppProject | Get both right in every AppProject, every time |
+| Listed, once, the kinds no team may deploy | Kept Argo CD's own namespace out of every AppProject, and denied those kinds in every one | Get both right in every AppProject, every time |
 | Added Carl to a group, then removed him | Gave him access in Argo CD and on the cluster, then took it away | Edit the roles of every AppProject he touches, and remember to undo it |
 | Added a namespace | Made it a destination | Edit the AppProject |
 | Asked for a release freeze, then lifted it | Added the sync window to that team's AppProject, then removed it | Edit one AppProject, and remember to undo it |
