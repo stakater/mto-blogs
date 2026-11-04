@@ -488,9 +488,10 @@ and sends their groups. The tenant decides what each group means:
 Vault, and nothing else. Joiners, movers and leavers are one change in one
 place: here, a person's Secret; in production, your identity provider.
 
-Each new tool joins the same way: a `Client` for Dex, and the same groups.
-That's how the next tools in this series, such as Argo CD and Grafana, will
-follow the tenant too.
+Each new tool joins the same way, and gets the same groups: as a `Client`
+for Dex, or through OpenShift's sign-in, which now goes through Dex. That's
+how the next tools in this series, such as Argo CD and Grafana, will follow
+the tenant too.
 
 You're still on the free edition's two tenants. When a third team arrives,
 that's where Multi-Tenant Operator Enterprise comes in.
