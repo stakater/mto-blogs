@@ -1,0 +1,68 @@
+# One guardrail for every namespace of every team, on this cluster.
+#
+# This is Template Operator v2, which ships with Multi-Tenant Operator. A
+# Template says what to render; a TemplateInstance renders it. Here the
+# instance hands the template the list of all namespaces, and the template
+# writes one NetworkPolicy into each namespace that belongs to a tenant:
+# pods accept traffic from their own team's namespaces and from the
+# cluster's router, and from nobody else.
+#
+# The operator watches the namespace list, so a namespace that joins a
+# tenant later gets the policy without anyone touching this file.
+#
+# `sync.mode: strict` keeps the policy as rendered, and refuses a change or
+# a delete made by hand.
+#
+# The shape follows the Template Operator v2 documentation ("Rendering to
+# many namespaces" and "Drift protection"). NOT YET VALIDATED on a cluster.
+apiVersion: templates.v2.stakater.com/v2alpha1
+kind: Template
+metadata:
+  name: tenant-guardrails
+  namespace: multi-tenant-operator
+spec:
+  parameters:
+    - name: namespaces
+      required: true
+  gotemplate: |
+    {{- range $ns := .parameters.namespaces }}
+    {{- $labels := default dict (index $ns.metadata "labels") }}
+    {{- if and (hasKey $labels "stakater.com/tenant") (not (hasKey $ns.metadata "deletionTimestamp")) }}
+    ---
+    apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: {{ $.instance.name }}-same-team-only
+      namespace: {{ $ns.metadata.name }}
+    spec:
+      podSelector: {}
+      policyTypes: [Ingress]
+      ingress:
+        - from:
+            - namespaceSelector:
+                matchLabels:
+                  stakater.com/tenant: {{ index $labels "stakater.com/tenant" | quote }}
+            - namespaceSelector:
+                matchLabels:
+                  policy-group.network.openshift.io/ingress: ""
+    {{- end }}
+    {{- end }}
+  sync:
+    mode: strict
+---
+apiVersion: templates.v2.stakater.com/v2alpha1
+kind: TemplateInstance
+metadata:
+  name: tenant-guardrails
+  namespace: multi-tenant-operator
+spec:
+  templateRef:
+    name: tenant-guardrails
+    namespace: multi-tenant-operator
+  parameters:
+    - name: namespaces
+      valueFrom:
+        objectFieldRef:
+          apiVersion: v1
+          kind: Namespace
+          jsonPath: .items        # no name: the whole list, watched

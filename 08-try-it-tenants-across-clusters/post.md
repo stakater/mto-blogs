@@ -26,7 +26,10 @@ By the end you'll have:
   in Git
 - the same team on both clusters, with a larger budget in production
 - a cluster that got its teams from one label
-- a team that created its own namespace, without asking the platform team
+- one guardrail in every namespace of every team, from a single template,
+  which refuses changes made by hand
+- a team that created its own namespace, without asking the platform team,
+  and got the guardrail anyway
 - proof that the boundary between teams holds on every cluster, and is put
   back when it's broken, by two different loops
 
@@ -62,6 +65,7 @@ Here's what you'll install:
 | Red Hat Advanced Cluster Management | [version] | Software Catalog (OperatorHub), on the hub | Knows the clusters and their labels, and decides which clusters each team is placed on |
 | Red Hat OpenShift GitOps | [version] | Software Catalog (OperatorHub), on the hub | Delivers each team's definition to its clusters, and keeps it in step with Git |
 | Multi-Tenant Operator | [version] | Software Catalog (OperatorHub), on each spoke | Turns each tenant into the team's namespaces, access and budget, and keeps them right |
+| Template Operator v2 | Ships with Multi-Tenant Operator | Switched on in step 3 | Puts the platform's guardrails into every team's namespaces, and keeps them as written |
 
 The Multi-Tenant Operator Basic edition is free with no expiry, and manages
 up to two tenants. That's exactly what this tutorial uses on each spoke.
@@ -157,7 +161,7 @@ export DEV_CLUSTER=<name of the development spoke, such as dev-spoke>
 export PROD_CLUSTER=<name of the production spoke, such as prod-spoke>
 ```
 
-Label the development spoke only. The production spoke waits until step 6:
+Label the development spoke only. The production spoke waits until step 7:
 
 ```bash
 oc --context "$HUB" label managedcluster "$DEV_CLUSTER" environment=dev
@@ -190,15 +194,24 @@ spoke's console, go to **Ecosystem → Software Catalog**, search for
 **multi tenant**, and install **Multi Tenant Operator** with the defaults.
 It installs into the `multi-tenant-operator` namespace.
 
-Then switch on its console, on both spokes. The first line of the loop
-waits until the operator has made its configuration:
+Then switch on two things it ships with, on both spokes: Template Operator
+v2, which step 6 uses for guardrails, and the console. Template Operator
+also gets the right to manage network policies, because that's what the
+guardrail is. The first line of the loop waits until the operator has made
+its configuration:
 
 ```bash
 for CTX in "$DEV" "$PROD"; do
   until oc --context "$CTX" -n multi-tenant-operator get integrationconfig tenant-operator-config >/dev/null 2>&1; do sleep 10; done
   oc --context "$CTX" -n multi-tenant-operator patch integrationconfig tenant-operator-config --type merge -p '{
     "spec": {
-      "components": {"console": true},
+      "components": {
+        "console": true,
+        "templateOperatorV2": {"mode": "Managed", "values": {"rbac": {"additionalRules": [
+          {"apiGroups": [""], "resources": ["namespaces"], "verbs": ["get", "list", "watch"]},
+          {"apiGroups": ["networking.k8s.io"], "resources": ["networkpolicies"], "verbs": ["*"]}
+        ]}}}
+      },
       "accessControl": {"privileged": {"users": ["mto@stakater.com"]}}
     }}'
 done
@@ -209,8 +222,26 @@ integrationconfig.tenantoperator.stakater.com/tenant-operator-config patched
 integrationconfig.tenantoperator.stakater.com/tenant-operator-config patched
 ```
 
-**What just happened:** both spokes can now turn a `Tenant` into a team.
-Neither has a tenant yet.
+Wait until Template Operator is running on each:
+
+```bash
+for CTX in "$DEV" "$PROD"; do
+  until oc --context "$CTX" get crd templateinstances.templates.v2.stakater.com >/dev/null 2>&1; do sleep 10; done
+  oc --context "$CTX" -n multi-tenant-operator get pods | grep template-operator-v2
+done
+```
+
+```
+template-operator-v2-controller-manager-...   1/1   Running   0   1m
+template-operator-v2-controller-manager-...   1/1   Running   0   1m
+```
+
+[To confirm in the validation run: the exact form of `rbac.additionalRules`,
+and whether refusing hand edits needs cert-manager on the spoke, as the
+Template Operator documentation says for its strict mode.]
+
+**What just happened:** both spokes can now turn a `Tenant` into a team, and
+a template into guardrails. Neither has a tenant yet.
 
 **In production,** the hub installs the operator on each cluster too, the
 same way it delivers the teams, so a new cluster needs nothing done by hand.
@@ -345,7 +376,72 @@ access. The hub never sent a namespace or a role binding.
 this built-in account: anyone who can read Secrets in
 `multi-tenant-operator` can read its password, and it sees every tenant.
 
-## Step 6: Bring in the production spoke with one label
+## Step 6: Give every team's namespaces the same guardrail
+
+A team's namespaces need more than access and a budget. Here the platform
+wants one rule everywhere: pods accept traffic from their own team's
+namespaces and from the cluster's router, and from nobody else. Sent from
+the hub as objects, that's one network policy per namespace, per team, per
+cluster, and a new one for every namespace added later.
+
+With Template Operator, it's two objects per cluster.
+[`guardrails/tenant-guardrails.yaml`](examples/guardrails/tenant-guardrails.yaml)
+holds a `Template`, which says what to write into each namespace that
+belongs to a tenant, and a `TemplateInstance`, which renders it:
+
+```yaml
+  gotemplate: |
+    {{- range $ns := .parameters.namespaces }}
+    {{- $labels := default dict (index $ns.metadata "labels") }}
+    {{- if and (hasKey $labels "stakater.com/tenant") (not (hasKey $ns.metadata "deletionTimestamp")) }}
+    ---
+    apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: {{ $.instance.name }}-same-team-only
+      namespace: {{ $ns.metadata.name }}
+    spec:
+      podSelector: {}
+      policyTypes: [Ingress]
+      ingress:
+        - from:
+            - namespaceSelector:
+                matchLabels:
+                  stakater.com/tenant: {{ index $labels "stakater.com/tenant" | quote }}
+            - namespaceSelector:
+                matchLabels:
+                  policy-group.network.openshift.io/ingress: ""
+    {{- end }}
+    {{- end }}
+  sync:
+    mode: strict
+```
+
+[`hub/guardrails.yaml`](examples/hub/guardrails.yaml) delivers those two
+objects to every cluster with an `environment` label. Apply it, pointing it
+at your fork:
+
+```bash
+sed "s|https://github.com/stakater/mto-blogs.git|$REPO|" hub/guardrails.yaml \
+  | oc --context "$HUB" apply -f -
+sleep 60
+oc --context "$DEV" get networkpolicies -A -l templates.v2.stakater.com/instance=tenant-guardrails
+```
+
+```
+NAMESPACE     NAME                                POD-SELECTOR   AGE
+acme-apps     tenant-guardrails-same-team-only    <none>         20s
+acme-build    tenant-guardrails-same-team-only    <none>         20s
+acme-data     tenant-guardrails-same-team-only    <none>         20s
+globex-apps   tenant-guardrails-same-team-only    <none>         20s
+```
+
+**What just happened:** the hub sent one `Template` and one
+`TemplateInstance`. Template Operator, on the spoke, listed the namespaces,
+kept the ones that belong to a tenant, and wrote a policy into each, with
+that team's name in it. It keeps watching the list, which matters in step 9.
+
+## Step 7: Bring in the production spoke with one label
 
 The production spoke has the operator and no teams. Placing it takes one
 label, on the hub:
@@ -358,10 +454,12 @@ oc --context "$HUB" -n openshift-gitops get applications
 
 ```
 NAME                SYNC STATUS   HEALTH STATUS
-acme-dev-spoke      Synced        Healthy
-acme-prod-spoke     Synced        Healthy
-globex-dev-spoke    Synced        Healthy
-globex-prod-spoke   Synced        Healthy
+acme-dev-spoke          Synced        Healthy
+acme-prod-spoke         Synced        Healthy
+globex-dev-spoke        Synced        Healthy
+globex-prod-spoke       Synced        Healthy
+guardrails-dev-spoke    Synced        Healthy
+guardrails-prod-spoke   Synced        Healthy
 ```
 
 Both teams arrived, and they're the same teams, with the production budget:
@@ -378,6 +476,20 @@ cpu=2 pods=10
 cpu=20 pods=50
 ```
 
+The guardrail came with them, in every one of their namespaces:
+
+```bash
+oc --context "$PROD" get networkpolicies -A -l templates.v2.stakater.com/instance=tenant-guardrails
+```
+
+```
+NAMESPACE     NAME                                POD-SELECTOR   AGE
+acme-apps     tenant-guardrails-same-team-only    <none>         30s
+acme-build    tenant-guardrails-same-team-only    <none>         30s
+acme-data     tenant-guardrails-same-team-only    <none>         30s
+globex-apps   tenant-guardrails-same-team-only    <none>         30s
+```
+
 > 📷 **Screenshot to capture** (`03-mto-console-prod-tenants.png`): the Multi-Tenant Operator console on the production spoke, Tenants page, with `acme` and `globex`.
 > **Highlight:** the row `acme`, with its larger quota.
 
@@ -387,9 +499,10 @@ cpu=20 pods=50
 **What just happened:** the label did two things. It registered the cluster
 in the hub's Argo CD, and it matched the `prod-clusters` placement, so the
 `ApplicationSet` rendered an Application per team for it, with the
-production overlay. Nobody wired the cluster up team by team.
+production overlay, and one for the guardrails. Nobody wired the cluster up
+team by team, or namespace by namespace.
 
-## Step 7: Change a team once
+## Step 8: Change a team once
 
 The `acme` team gets a group of editors. That's one change, in the base.
 Add the `editors` lines to `teams/acme/base/tenant.yaml`:
@@ -435,7 +548,7 @@ yes
 operator gave the new group its access in every one of the team's
 namespaces. You changed the team once, not once per namespace per cluster.
 
-## Step 8: Let a team create its own namespace
+## Step 9: Let a team create its own namespace
 
 Anna needs a scratch namespace on the development spoke. She doesn't open a
 pull request for it. She creates it, on the spoke, as an owner of `acme`:
@@ -468,6 +581,17 @@ tenant=acme
 yes
 ```
 
+And it has the guardrail, though nobody asked for one:
+
+```bash
+oc --context "$DEV" -n acme-scratch get networkpolicies
+```
+
+```
+NAME                               POD-SELECTOR   AGE
+tenant-guardrails-same-team-only   <none>         15s
+```
+
 Sync the team from the hub, and check the namespace is still there:
 
 ```bash
@@ -489,10 +613,11 @@ acme-scratch   Active   2m
 have sent it. Multi-Tenant Operator, on the spoke, saw an owner of `acme`
 create it, made it part of the tenant, and counted it against the team's
 one budget. [To confirm with engineering: the quota is one budget across
-all the tenant's namespaces.] It exists only on this cluster, which is what
-Anna wanted.
+all the tenant's namespaces.] Template Operator saw a new namespace with a tenant's
+label and wrote the guardrail into it. The namespace exists only on this
+cluster, which is what Anna wanted.
 
-## Step 9: See the boundary hold on every cluster
+## Step 10: See the boundary hold on every cluster
 
 Anna owns `acme`, on the clusters `acme` is placed on. She has nothing in
 `globex`, on either:
@@ -517,9 +642,10 @@ no
 gave `acme`'s groups access to `acme`'s namespaces only, so the boundary is
 the same on every cluster without anyone writing it per cluster.
 
-## Step 10: Break it twice
+## Step 11: Break it three ways
 
-Two loops keep a cluster right. Break something each one covers.
+Two loops keep a cluster right, and the guardrails refuse changes outright.
+Try each.
 
 **First, inside the tenant.** Remove the owners' access from one of `acme`'s
 namespaces on the development spoke, as a cluster administrator might by
@@ -560,22 +686,42 @@ missing from the cluster, so Argo CD delivered it again, and Multi-Tenant
 Operator took the team's namespace back into it. Each loop covers what the
 other can't see.
 
+**Last, a guardrail.** Open `acme-apps` to traffic from everywhere, by
+changing its policy on the development spoke:
+
+```bash
+oc --context "$DEV" -n acme-apps patch networkpolicy tenant-guardrails-same-team-only \
+  --type merge -p '{"spec":{"ingress":[{}]}}'
+```
+
+```
+Error from server (Forbidden): admission webhook "sync-enforcement.templates.v2.stakater.com" denied the request: resource is managed by sync-enabled TemplateInstance multi-tenant-operator/tenant-guardrails; modifications to enforced fields are not allowed
+```
+
+**What just happened:** nothing was put back, because nothing changed. The
+template is strict, so Template Operator refused the change before it
+reached the cluster, and said which template owns the policy. To change a
+guardrail, change the template in Git, and every namespace on every cluster
+follows.
+
 ## Clean up
 
 Remove things in this order:
 
 ```bash
-# The teams' delivery, and what joins the hub's two tools
-oc --context "$HUB" -n openshift-gitops delete applicationset teams
+# The delivery of teams and guardrails, and what joins the hub's two tools
+oc --context "$HUB" -n openshift-gitops delete applicationset teams guardrails
 oc --context "$HUB" delete -f hub/placements.yaml
 oc --context "$HUB" delete -f hub/gitops-clusters.yaml
 
 # The labels
 oc --context "$HUB" label managedcluster "$DEV_CLUSTER" "$PROD_CLUSTER" environment-
 
-# The teams on each spoke, if the hub left any. Multi-Tenant Operator keeps
+# The guardrails and the teams on each spoke, if the hub left any. Multi-Tenant Operator keeps
 # a deleted tenant's namespaces, so delete those too.
 for CTX in "$DEV" "$PROD"; do
+  oc --context "$CTX" -n multi-tenant-operator delete templateinstance tenant-guardrails --ignore-not-found
+  oc --context "$CTX" -n multi-tenant-operator delete template tenant-guardrails --ignore-not-found
   oc --context "$CTX" delete tenant acme globex --ignore-not-found
   oc --context "$CTX" delete quotas.tenantoperator.stakater.com acme-quota globex-quota --ignore-not-found
   oc --context "$CTX" delete namespace acme-apps acme-build acme-data acme-scratch globex-apps --ignore-not-found
@@ -591,16 +737,20 @@ Operators** on each cluster.
 Two teams, each defined once in Git, running on two clusters. The hub
 decided where each team exists: a label placed a cluster, and the teams
 followed. Multi-Tenant Operator decided what each team is there: it built
-the namespaces, the access and the budget from two small objects, let a
-team add a namespace on its own, and put back what was changed.
+the namespaces, the access and the budget from two small objects, and the
+guardrails from one template. It let a team add a namespace on its own,
+gave that namespace its guardrail, and put back or refused what was
+changed.
 
 | You did | The hub | Multi-Tenant Operator |
 |---|---|---|
 | Labeled a cluster | Placed both teams on it | Built each team there |
 | Committed one change to a team | Delivered it to every cluster | Applied it in every namespace of the team |
-| Created a namespace as a tenant owner | | Made it part of the tenant |
+| Delivered one guardrail template | Sent it to every cluster | Wrote the guardrail into every team's namespaces |
+| Created a namespace as a tenant owner | | Made it part of the tenant, and gave it the guardrail |
 | Deleted a role binding on a spoke | | Put it back |
 | Deleted a `Tenant` on a spoke | Put it back | Took the team's namespaces back into it |
+| Changed a guardrail by hand | | Refused it |
 
 What this tutorial left out on purpose: a team's slice of other tools, such
 as a Vault namespace or an Argo CD AppProject. Those belong to one cluster

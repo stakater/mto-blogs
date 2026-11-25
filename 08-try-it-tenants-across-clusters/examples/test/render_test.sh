@@ -4,8 +4,8 @@
 # It proves, without a cluster, what the tutorial claims about the
 # definitions: each team renders with the same identity for every
 # environment, and each overlay changes only the budget. It also checks that
-# the hub's ApplicationSet points at an overlay that exists for every team
-# and environment it lists. This is the quick gate. The full proof is the
+# the hub's ApplicationSet lists every team in every environment, and that
+# the guardrail template is the strict, tenant-keyed one the tutorial describes. This is the quick gate. The full proof is the
 # tutorial's validation run on real clusters.
 #
 # Needs: kubectl (for `kubectl kustomize`) or kustomize. Run: ./test/render_test.sh
@@ -68,6 +68,14 @@ for team in acme globex; do
     fi
   done
 done
+
+# The guardrail template: Template Operator v2, strict, keyed on the tenant label.
+g="$(cat guardrails/tenant-guardrails.yaml)"
+check "guardrails: Template Operator v2 API"  "$g" "apiVersion: templates.v2.stakater.com/v2alpha1"
+check "guardrails: a Template"                "$g" "kind: Template"
+check "guardrails: a TemplateInstance"        "$g" "kind: TemplateInstance"
+check "guardrails: only tenant namespaces"    "$g" 'hasKey $labels "stakater.com/tenant"'
+check "guardrails: strict sync"               "$g" "mode: strict"
 
 echo
 if [ "$fail" -eq 0 ]; then

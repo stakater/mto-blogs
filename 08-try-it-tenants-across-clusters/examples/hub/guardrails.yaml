@@ -1,0 +1,38 @@
+# Delivers the guardrails to every cluster that takes part in tenancy.
+#
+# One ApplicationSet on the hub. For each cluster with an `environment`
+# label it renders one Argo CD Application that delivers the two objects in
+# guardrails/. That's the whole delivery: Template Operator, on the cluster,
+# turns them into a NetworkPolicy per tenant namespace.
+#
+# The tutorial replaces repoURL with your fork before applying this file.
+#
+# NOT YET VALIDATED: see hub/gitops-clusters.yaml.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: guardrails
+  namespace: openshift-gitops
+spec:
+  generators:
+    - clusterDecisionResource:
+        configMapRef: acm-placement
+        labelSelector:
+          matchLabels:
+            cluster.open-cluster-management.io/placement: tenancy-clusters
+        requeueAfterSeconds: 30
+  template:
+    metadata:
+      name: 'guardrails-{{name}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/stakater/mto-blogs.git
+        targetRevision: main
+        path: 08-try-it-tenants-across-clusters/examples/guardrails
+      destination:
+        server: '{{server}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
