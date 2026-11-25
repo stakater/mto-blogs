@@ -493,7 +493,7 @@ globex-apps   tenant-guardrails-same-team-only    <none>         30s
 > 📷 **Screenshot to capture** (`03-mto-console-prod-tenants.png`): the Multi-Tenant Operator console on the production spoke, Tenants page, with `acme` and `globex`.
 > **Highlight:** the row `acme`, with its larger quota.
 
-> 📷 **Screenshot to capture** (`04-hub-team-placements.png`): OpenShift GitOps on the hub, Applications, with `acme` and `globex` on each spoke, all Synced and Healthy.
+> 📷 **Screenshot to capture** (`04-hub-team-placements.png`): OpenShift GitOps on the hub, Applications, with `acme`, `globex` and the guardrails on each spoke, all Synced and Healthy.
 > **Highlight:** the two Applications for `acme`, one per spoke.
 
 **What just happened:** the label did two things. It registered the cluster

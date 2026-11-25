@@ -21,16 +21,17 @@ production and each region. Forty application teams work across them. The
 
 The hub already knows every cluster, and can send configuration to any of
 them. Yet tenancy is still done cluster by cluster. A team isn't one thing
-the hub can send. It's a set of namespaces, role bindings and quotas, copied
-to each cluster and kept in step there. And part of what a team needs can't
+the hub can send. It's a set of namespaces, role bindings, quotas and
+network policies, copied to each cluster and kept in step there. And part of what a team needs can't
 be sent at all, because it happens on the cluster, after the hub has done
 its work: a team adds a namespace, and something has to give it the right
-access and count it against the right budget.
+access, the right guardrails, and count it against the right budget.
 
 This article shows a different split of the work. You define each team once,
 in Git, as a **tenant**. The hub decides which clusters a team is on. On
 each of those clusters, Multi-Tenant Operator turns the tenant into the
-team's namespaces, access and budget, and keeps them right from then on.
+team's namespaces, access and budget, puts the platform's guardrails into
+every one of those namespaces, and keeps it all right from then on.
 
 The tenant comes from **Multi-Tenant Operator**, a Red Hat certified operator
 from Stakater. It's a commercial product, with a free Basic edition that
@@ -41,7 +42,8 @@ OpenShift GitOps.
 **In this article:**
 
 - what one team costs across a fleet today, and where that breaks down
-- the idea: the hub places a team, the tenant defines it
+- the idea: the hub places a team, the tenant defines it, and one template
+  guards it
 - how it works, with two loops that keep each cluster right
 - what the platform team sees on each cluster
 - the guardrails a fleet owner will ask about
@@ -68,27 +70,31 @@ own.
 ## What one team costs across a fleet
 
 Here's the `acme` team on one cluster, as the objects the hub has to send.
-The team has three namespaces, two groups of people and a budget:
+The team has three namespaces, two groups of people, a budget, and the
+platform's rule that a team's pods only accept traffic from their own team:
 
 ```
 Namespace       acme-apps
 RoleBinding     acme-apps/owners     group acme-owners   -> admin
 RoleBinding     acme-apps/viewers    group acme-viewers  -> view
 ResourceQuota   acme-apps/budget     a third of the team's budget
+NetworkPolicy   acme-apps/same-team  traffic from acme and the router only
 
 Namespace       acme-build
 RoleBinding     acme-build/owners    group acme-owners   -> admin
 RoleBinding     acme-build/viewers   group acme-viewers  -> view
 ResourceQuota   acme-build/budget    a third of the team's budget
+NetworkPolicy   acme-build/same-team traffic from acme and the router only
 
 Namespace       acme-data
 RoleBinding     acme-data/owners     group acme-owners   -> admin
 RoleBinding     acme-data/viewers    group acme-viewers  -> view
 ResourceQuota   acme-data/budget     a third of the team's budget
+NetworkPolicy   acme-data/same-team  traffic from acme and the router only
 ```
 
-That's twelve objects for one team on one cluster. Forty teams on twelve
-clusters would be 5,760. No team is on every cluster, so the real number is
+That's fifteen objects for one team on one cluster. Forty teams on twelve
+clusters would be 7,200. No team is on every cluster, so the real number is
 smaller, and it's still thousands of objects that have to agree with each
 other.
 
@@ -107,12 +113,11 @@ works until the upkeep starts:
 - **Production differs,** in ways that live inside the template's
   conditions, where nobody reviewing a change can see them.
 
-And it breaks quietly. A role binding edited on one cluster stays edited
-until the next sync, or forever if that sync is manual. A cluster that loses
-its link to the hub keeps whatever it last had. The template itself has
-become a tenancy system that the platform team wrote, and now owns.
+And it breaks quietly. A network policy edited on one cluster stays edited
+until the next sync, or forever if that sync is manual. The template itself
+has become a tenancy system that the platform team wrote, and now owns.
 
-## The idea: the hub places, the tenant defines
+## The idea: the hub places, the tenant defines, a template guards
 
 Multi-Tenant Operator adds the object that's missing: a `Tenant` is the
 team. One object names the team's namespaces, its people and its budget, and
@@ -149,10 +154,17 @@ patches:
         value: "20"
 ```
 
+The guardrails aren't part of any team, so they aren't in any tenant.
+They're one **template** for the whole cluster. Multi-Tenant Operator ships
+with Template Operator, which takes a template such as "in every namespace
+that belongs to a tenant, this network policy, with that tenant's name in
+it" and keeps it true. It watches the cluster's namespaces, so a namespace
+that joins a team tomorrow gets the policy without anyone asking.
+
 So the work splits in two. **The hub decides where a team exists:** which
 clusters get `acme`, and with which overlay. **Multi-Tenant Operator decides
 what a team is there:** it creates the namespaces, binds the groups, applies
-the budget, and keeps doing so.
+the budget, writes the guardrails, and keeps doing so.
 
 | The work | The hub | Multi-Tenant Operator, on each cluster |
 |---|---|---|
@@ -163,10 +175,13 @@ the budget, and keeps doing so.
 | Add a person or a namespace for a team | Sends the changed `Tenant` | Updates every namespace of the team |
 | Give a team one budget across its namespaces | | One `Quota` for the tenant [To confirm with engineering: the quota is one budget across all the tenant's namespaces, and tests cover it] |
 | Let a team add a namespace on its own | | A tenant owner creates it; it joins the tenant, with its access and inside its budget [To confirm with engineering: this works when the `Tenant` is managed from Git, and the namespace survives the next sync] |
-| Undo a change made on the cluster | Puts back a changed `Tenant` | Puts back what's inside the tenant |
+| Give every team's namespaces the platform's guardrails | Sends one template per cluster | Template Operator writes them into every tenant namespace, including ones created later |
+| Undo a change made on the cluster | Puts back a changed `Tenant` | Puts back what's inside the tenant, and refuses a change to a guardrail |
 
-The hub does what it's good at, and the template is gone. What the hub
-sends for a team is two small objects, whatever the team's size.
+The hub does what it's good at, and the homegrown template is gone. What
+the hub sends for a team is two small objects, whatever the team's size. What
+it sends for the guardrails is one template per cluster, however many teams
+are on it.
 
 ## How it works
 
@@ -179,6 +194,7 @@ each spoke and governs only that spoke.
 | **Red Hat Advanced Cluster Management**, on the hub | Knows the clusters and their labels, and decides which clusters each team is placed on |
 | **Red Hat OpenShift GitOps**, on the hub | Delivers each team's definition to the clusters it's placed on, and keeps it in step with Git |
 | **Multi-Tenant Operator**, on each spoke | Turns the tenant into namespaces, access and budget, and keeps them right |
+| **Template Operator**, on each spoke | Ships with Multi-Tenant Operator. Writes the platform's guardrails into every tenant namespace, and refuses hand edits |
 
 [To confirm with Raffaele: placement by Advanced Cluster Management with
 delivery by OpenShift GitOps is the path Red Hat wants shown. If it's
@@ -226,10 +242,15 @@ Multi-Tenant Operator puts it back. It doesn't need the hub for that. A
 spoke that loses its link to the hub keeps every team's boundary in force,
 and picks up changes from Git when the link returns.
 
+**Guardrails don't need a loop.** A template can be strict: Template
+Operator then refuses a change or a delete made by hand, at the moment it's
+tried, and says which template owns the object.
+
 Placement is a label. A team's definition says which clusters it belongs
 on, such as every cluster labeled as development. When a new cluster joins
 the hub and gets that label, its teams arrive, and Multi-Tenant Operator
-builds each one. Nobody wires the cluster up team by team.
+builds each one and guards its namespaces. Nobody wires the cluster up team
+by team.
 
 ## What the platform team sees
 
@@ -247,7 +268,7 @@ On a production spoke, it's the same team with the production budget:
 The hub shows where each team has been placed, and whether each cluster is
 in step with Git:
 
-> 📷 **Screenshot to capture** (`04-hub-team-placements.png`): OpenShift GitOps on the hub, Applications, with `acme` and `globex` on each spoke, all Synced and Healthy.
+> 📷 **Screenshot to capture** (`04-hub-team-placements.png`): OpenShift GitOps on the hub, Applications, with `acme`, `globex` and the guardrails on each spoke, all Synced and Healthy.
 > **Highlight:** the two Applications for `acme`, one per spoke.
 
 ## Guardrails for the fleet owner
@@ -255,19 +276,25 @@ in step with Git:
 The people who own the fleet will ask what this setup can do on their
 clusters. The answers:
 
-- **The hub needs very little on each spoke.** To deliver teams, it creates
-  two kinds of object, `Tenant` and `Quota`. The namespaces and role
-  bindings are made on the spoke, by the operator. [To confirm in the
-  validation run: the hub's access on a spoke can be limited to those two
+- **The hub needs very little on each spoke.** It delivers a `Tenant` and a
+  `Quota` per team, and one template for the guardrails. The namespaces,
+  role bindings and network policies are made on the spoke, by the
+  operator. [To confirm in the
+  validation run: the hub's access on a spoke can be limited to those
   kinds, and how.]
 - **Whoever can merge decides what a team is.** A change to the base reaches
   every cluster the team is on. Keep the base with the platform team, and
   let teams propose changes as pull requests.
+- **Guardrails can't be edited by hand.** A strict template refuses changes
+  and deletes of what it wrote, for everyone but Template Operator itself.
+  To change a guardrail, change the template in Git.
+- **Templates are a control point.** Whoever can write a template can make
+  Template Operator write anything it has the right to write. Keep templates
+  with the platform team, and give Template Operator only the kinds your
+  guardrails need.
 - **The differences between environments are written down.** An overlay is
-  the whole list of how an environment differs, and it's reviewed like any
-  other change.
-- **A mistake in an overlay stays in its environment.** A wrong number in
-  the development overlay reaches development clusters only.
+  the whole list of how an environment differs, and a mistake in one stays
+  in its environment.
 - **A spoke stands on its own.** Each cluster's operator works without the
   hub. If the hub is unreachable, no team loses its boundary.
 - **Teams stay inside their tenant.** A tenant owner can act in the team's
@@ -287,8 +314,8 @@ on it.
 Multi-Tenant Operator's Basic edition is free with no expiry, and manages up
 to two tenants. [To confirm: Basic is two tenants on each cluster, so two
 teams on two spokes need no license.] That's enough to see two teams on two
-clusters from one definition each, a cluster that gets its teams from one
-label, and a boundary that's put back when it's broken.
+clusters from one definition each, a cluster that gets its teams and their
+guardrails from one label, and a boundary that's put back when it's broken.
 
 You bring the clusters: a hub with Advanced Cluster Management and OpenShift
 GitOps, and two spokes. The companion tutorial,

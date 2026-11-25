@@ -22,8 +22,9 @@ each cluster and kept in step by hand or by templates nobody enjoys
 reading. With Multi-Tenant Operator on every spoke, the team is one small
 `Tenant` in Git. The hub decides which clusters a team is on, and
 Multi-Tenant Operator on each cluster turns that definition into the team's
-namespaces, access, budget and guardrails, and keeps them right, including
-for things that appear later. At the end the reader has two teams on two
+namespaces, access and budget, and Template Operator v2, which ships with
+it, puts the platform's guardrails into every one of those namespaces. Both
+keep it right, including for things that appear later. At the end the reader has two teams on two
 clusters from one definition each, a new cluster that gets its teams from
 one label, and a boundary that holds on every cluster even when the hub is
 out of reach.
@@ -44,7 +45,7 @@ claimed in the explainer.
 | # | Point | How the reader sees it |
 |---|---|---|
 | 1 | **The hub ships objects, and a team isn't a fixed set of objects.** In plain manifests one team is a namespace, role bindings, a quota and network policies, for every namespace, on every cluster. As a tenant it's one object of about twenty lines. | The explainer counts both, side by side |
-| 2 | **Some of tenancy needs a controller on the cluster.** One budget across all of a team's namespaces. A team creating its own namespace inside its boundary, with no pull request to the central repository. Guardrails that reach namespaces created later. The team's slice of Vault and Argo CD on that cluster, from the earlier articles. | The tutorial has a tenant owner create a namespace on a spoke, and shows it land inside the tenant |
+| 2 | **Some of tenancy needs a controller on the cluster.** One budget across all of a team's namespaces. A team creating its own namespace inside its boundary, with no pull request to the central repository. Guardrails that reach namespaces created later, and refuse hand edits: one Template Operator v2 template per cluster, in strict mode. The team's slice of Vault and Argo CD on that cluster, from the earlier articles. | The tutorial has a tenant owner create a namespace on a spoke, and shows it land inside the tenant and get its network policy. Then it tries to edit the policy, and is refused |
 | 3 | **Placement is the fleet's job, and it's one label.** Which clusters a team is on is a selector on the hub. A new cluster joins, gets its label, and its teams arrive. | The tutorial labels the second spoke and watches both teams appear |
 | 4 | **Two loops keep it right.** Something inside a tenant changes on a spoke: the operator puts it back, locally. The `Tenant` itself is changed or deleted: the hub puts it back. A spoke cut off from the hub still holds its boundary. | The tutorial breaks it both ways |
 
@@ -65,6 +66,7 @@ assumes yes to each; if one is no, that part comes out.
 | 2 | When the `Tenant` is managed from Git, can a tenant owner still create a namespace on the spoke, and does it survive the next sync from the hub? | Engineering | Point 2's strongest claim, and the riskiest: a sync could revert it |
 | 3 | Is the Basic edition two tenants per cluster, so two tenants on each of two spokes needs no license? | Rasheed | The tutorial must fit the free edition |
 | 4 | Which distribution path does Red Hat want shown: Advanced Cluster Management placement with OpenShift GitOps delivering, or Advanced Cluster Management policies? | Raffaele | The tutorial shows one path, and it should be the one Red Hat recommends |
+| 6 | For Template Operator v2: the exact form of `rbac.additionalRules`, whether strict mode needs cert-manager on the cluster when Multi-Tenant Operator manages it, and that tests cover a namespace created after the template | Engineering, then the validation run | The guardrail steps, and the refused edit |
 | 5 | Can the hub act as one of the spokes, so the tutorial needs two clusters and not three? | Validation run | Fewer readers can bring three clusters |
 
 ## Explainer outline (post 7)
@@ -120,14 +122,15 @@ provider is needed. The "In production" note points to the sign-in articles.
 |---|---|---|---|
 | 1 | The hub is ready: Advanced Cluster Management and OpenShift GitOps installed and connected | | |
 | 2 | Both spokes have joined the hub; only the dev spoke is labeled for tenancy | | The hub's cluster list, with the labels |
-| 3 | Both spokes have Multi-Tenant Operator, installed from the Software Catalog like the earlier tutorials. Installing it from the hub is the "In production" note | | |
+| 3 | Both spokes have Multi-Tenant Operator, with Template Operator v2 and the console switched on, installed from the Software Catalog like the earlier tutorials. Installing it from the hub is the "In production" note | | |
 | 4 | Two teams defined once, in the reader's fork: a base and an overlay per environment. `make test` passes without a cluster | | |
 | 5 | Both teams appear on the dev spoke | Point 1 | Multi-Tenant Operator console on dev, Tenants page (required) |
-| 6 | The prod spoke gets its label, and both teams arrive with the production budget | Point 3 | Multi-Tenant Operator console on prod (required); the hub showing both placements |
-| 7 | One commit adds a member group; both clusters follow | One definition | |
-| 8 | A tenant owner creates a namespace on the dev spoke; it lands inside the tenant and its budget, and survives the next sync | Point 2 | Multi-Tenant Operator console, Namespaces page |
-| 9 | `acme`'s owner can't touch `globex`, on either cluster | The boundary | |
-| 10 | Break it twice: delete a role binding on a spoke, then delete a `Tenant`. Each comes back, from a different loop | Point 4 | |
+| 6 | One guardrail template, delivered once per cluster: a network policy appears in every tenant namespace | Point 2 | |
+| 7 | The prod spoke gets its label, and both teams arrive with the production budget and the guardrails | Point 3 | Multi-Tenant Operator console on prod (required); the hub showing both placements |
+| 8 | One commit adds a member group; both clusters follow | One definition | |
+| 9 | A tenant owner creates a namespace on the dev spoke; it lands inside the tenant and its budget, gets the guardrail, and survives the next sync | Point 2 | Multi-Tenant Operator console, Namespaces page |
+| 10 | `acme`'s owner can't touch `globex`, on either cluster | The boundary | |
+| 11 | Break it three ways: delete a role binding on a spoke, delete a `Tenant`, then edit a guardrail. The first two come back, from different loops; the third is refused | Point 4 | |
 | | Clean up, in the order that works | | |
 | | What you built; what was left out on purpose; where Enterprise comes in | | |
 
