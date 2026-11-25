@@ -1,0 +1,43 @@
+# Connects Advanced Cluster Management to OpenShift GitOps, on the hub.
+#
+# Every managed cluster that carries an `environment` label is registered in
+# the hub's Argo CD, so OpenShift GitOps can deliver to it. A cluster with no
+# `environment` label is left alone.
+#
+# NOT YET VALIDATED: written from the product documentation as remembered,
+# and to be checked against the Advanced Cluster Management version used in
+# the validation run.
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSetBinding
+metadata:
+  name: default
+  namespace: openshift-gitops
+spec:
+  clusterSet: default
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: tenancy-clusters
+  namespace: openshift-gitops
+spec:
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions:
+            - key: environment
+              operator: Exists
+---
+apiVersion: apps.open-cluster-management.io/v1beta1
+kind: GitOpsCluster
+metadata:
+  name: tenancy-clusters
+  namespace: openshift-gitops
+spec:
+  argoServer:
+    cluster: local-cluster
+    argoNamespace: openshift-gitops
+  placementRef:
+    apiVersion: cluster.open-cluster-management.io/v1beta1
+    kind: Placement
+    name: tenancy-clusters

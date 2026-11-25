@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# Render test for the multi-cluster tenancy example.
+# Render test for the example files.
 #
-# It proves the pattern the tutorial claims, without a cluster: the same
-# Tenant identity renders for every environment, and each overlay changes
-# only its own budget. This is the cheap, deterministic gate — the full
-# proof is the tutorial's validation run on real clusters.
+# It proves, without a cluster, what the tutorial claims about the
+# definitions: each team renders with the same identity for every
+# environment, and each overlay changes only the budget. It also checks that
+# the hub's ApplicationSet points at an overlay that exists for every team
+# and environment it lists. This is the quick gate. The full proof is the
+# tutorial's validation run on real clusters.
 #
 # Needs: kubectl (for `kubectl kustomize`) or kustomize. Run: ./test/render_test.sh
 set -euo pipefail
@@ -21,7 +23,7 @@ fi
 
 fail=0
 check() { # name  haystack  needle
-  if printf '%s' "$2" | grep -qF "$3"; then
+  if printf '%s' "$2" | grep -qF -- "$3"; then
     echo "ok   | $1"
   else
     echo "FAIL | $1 (expected to find: $3)"
@@ -29,34 +31,47 @@ check() { # name  haystack  needle
   fi
 }
 
-dev="$(build overlays/dev)"
-prod="$(build overlays/prod)"
+# Only the Tenant document of a render, so identity can be compared.
+tenant_of() { printf '%s\n' "$1" | awk 'BEGIN{RS="---\n"} /kind: Tenant/' | grep -v 'stakater.com/environment'; }
 
-# Same team on every cluster: identity and access do not vary by environment.
-check "dev: Tenant acme"          "$dev"  "name: acme"
-check "prod: Tenant acme"         "$prod" "name: acme"
-check "dev: owners group"         "$dev"  "acme-owners"
-check "prod: owners group"        "$prod" "acme-owners"
-check "dev: viewers group"        "$dev"  "acme-viewers"
-check "prod: viewers group"       "$prod" "acme-viewers"
+for team in acme globex; do
+  dev="$(build "teams/$team/overlays/dev")"
+  prod="$(build "teams/$team/overlays/prod")"
 
-# Each environment carries its own budget, and only the budget differs.
-check "dev: small cpu budget"     "$dev"  'requests.cpu: "2"'
-check "dev: small pod budget"     "$dev"  'pods: "5"'
-check "prod: large cpu budget"    "$prod" 'requests.cpu: "20"'
-check "prod: large pod budget"    "$prod" 'pods: "50"'
+  # The same team in every environment.
+  check "$team dev: the Tenant"            "$dev"  "name: $team"
+  check "$team prod: the Tenant"           "$prod" "name: $team"
+  check "$team dev: owners group"          "$dev"  "$team-owners"
+  check "$team prod: owners group"         "$prod" "$team-owners"
+  if [ "$(tenant_of "$dev")" = "$(tenant_of "$prod")" ]; then
+    echo "ok   | $team: Tenant identical in dev and prod"
+  else
+    echo "FAIL | $team: Tenant differs between dev and prod"; fail=1
+  fi
 
-# Each render is stamped with the environment it is for.
-check "dev: marked as dev"        "$dev"  "stakater.com/environment: dev"
-check "prod: marked as prod"      "$prod" "stakater.com/environment: prod"
+  # Each environment carries its own budget, under a name that doesn't change.
+  check "$team dev: smaller cpu budget"    "$dev"  'requests.cpu: "2"'
+  check "$team prod: larger cpu budget"    "$prod" 'requests.cpu: "20"'
+  check "$team dev: quota name"            "$dev"  "name: $team-quota"
+  check "$team prod: quota name"           "$prod" "name: $team-quota"
 
-# The quota's name is stable, so the Tenant's reference to it holds everywhere.
-check "dev: quota name stable"    "$dev"  "name: acme-quota"
-check "prod: quota name stable"   "$prod" "name: acme-quota"
+  # Each render is marked with its environment.
+  check "$team dev: marked as dev"         "$dev"  "stakater.com/environment: dev"
+  check "$team prod: marked as prod"       "$prod" "stakater.com/environment: prod"
+
+  # The hub's ApplicationSet lists this team in both environments.
+  for env in dev prod; do
+    if grep -A1 -F -- "- team: $team" hub/teams.yaml | grep -qF "env: $env"; then
+      echo "ok   | $team $env: listed in hub/teams.yaml"
+    else
+      echo "FAIL | $team $env: not listed in hub/teams.yaml"; fail=1
+    fi
+  done
+done
 
 echo
 if [ "$fail" -eq 0 ]; then
-  echo "PASS: every overlay renders the same team with its own budget."
+  echo "PASS: every team renders the same in each environment, with its own budget."
 else
   echo "one or more checks failed" >&2
 fi

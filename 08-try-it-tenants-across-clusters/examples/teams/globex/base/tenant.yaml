@@ -1,0 +1,19 @@
+# The globex team, defined once, the same way as acme. A second team makes
+# the boundary between teams visible, and two is what the free Basic edition
+# manages.
+apiVersion: tenantoperator.stakater.com/v1beta3
+kind: Tenant
+metadata:
+  name: globex
+spec:
+  quota: globex-quota
+  accessControl:
+    owners:
+      groups:
+        - globex-owners
+    viewers:
+      groups:
+        - globex-viewers
+  namespaces:
+    withTenantPrefix:
+      - apps

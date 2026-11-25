@@ -1,0 +1,62 @@
+# Delivers every team to the clusters it is placed on.
+#
+# One ApplicationSet on the hub. For each environment it takes the clusters
+# that environment's Placement selected, and for each team placed there it
+# renders one Argo CD Application: that team's overlay, on that cluster.
+# Argo CD then keeps the Tenant and Quota on the cluster in step with Git.
+#
+# To place a team in an environment, add it to that environment's list.
+#
+# The tutorial replaces repoURL with your fork before applying this file.
+#
+# NOT YET VALIDATED: see hub/gitops-clusters.yaml.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: teams
+  namespace: openshift-gitops
+spec:
+  generators:
+    - matrix:
+        generators:
+          - clusterDecisionResource:
+              configMapRef: acm-placement
+              labelSelector:
+                matchLabels:
+                  cluster.open-cluster-management.io/placement: dev-clusters
+              requeueAfterSeconds: 30
+          - list:
+              elements:
+                - team: acme
+                  env: dev
+                - team: globex
+                  env: dev
+    - matrix:
+        generators:
+          - clusterDecisionResource:
+              configMapRef: acm-placement
+              labelSelector:
+                matchLabels:
+                  cluster.open-cluster-management.io/placement: prod-clusters
+              requeueAfterSeconds: 30
+          - list:
+              elements:
+                - team: acme
+                  env: prod
+                - team: globex
+                  env: prod
+  template:
+    metadata:
+      name: '{{team}}-{{name}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/stakater/mto-blogs.git
+        targetRevision: main
+        path: '08-try-it-tenants-across-clusters/examples/teams/{{team}}/overlays/{{env}}'
+      destination:
+        server: '{{server}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true

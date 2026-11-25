@@ -3,428 +3,614 @@
 <!--
 Outlet: Red Hat Developer (tutorial), then the Stakater blog, canonical link back.
 Companion to post 7, "One tenant, on every cluster", which explains why.
-Screenshots: captured in the validation run. The full list, with highlights,
-is in screenshots/README.md.
+Screenshots: each "Screenshot to capture" block is a slot, filled during the
+validation run. The full list, with highlights, is in screenshots/README.md.
 
-STATUS: DRAFT — NOT YET VALIDATED. The example files under examples/ render
-and pass `make test`. The cluster steps below have not yet been run end to
-end on a real hub-and-spokes setup, so no OpenShift version is claimed yet.
-The validation run fills that in and fixes every step that needs it, per
+STATUS: DRAFT, rewritten from 07-tenants-across-clusters/story.md. NOT YET
+VALIDATED. The team definitions render and pass `make test`. No step below
+has been run on a cluster, so every expected output is what we expect, not
+what we saw, and no version is claimed. Every "[To confirm: ...]" in the
+text is an open question from story.md. The validation run resolves each
+one, fills in the versions and fixes every step that needs it, per
 docs/guidelines/tutorial.md. Do not submit until then.
 -->
 
 In [One tenant, on every cluster](../07-tenants-across-clusters/post.md), we
-showed how a team defined once, as a tenant, can run the same way on every
-cluster, with per-cluster differences kept to a small overlay. This tutorial
-builds it, step by step, two ways: with Red Hat OpenShift GitOps, and with
-Red Hat Advanced Cluster Management.
+showed how a hub decides where a team exists, and Multi-Tenant Operator on
+each cluster decides what the team is there. This tutorial builds it, step
+by step.
 
 By the end you'll have:
 
-- the `acme` team running on two clusters at once — a dev cluster and a prod
-  cluster — from a single definition in Git
-- the same team on both: same namespaces, same owners and viewers; and a
-  different budget on each, from a one-line-per-value overlay
-- that team distributed first by OpenShift GitOps, then by Advanced Cluster
-  Management, so you can see which fits your platform
-- proof that a change in Git reaches every cluster, and that a change made
-  directly on a cluster is corrected
+- two teams, `acme` and `globex`, on two clusters, each from one definition
+  in Git
+- the same team on both clusters, with a larger budget in production
+- a cluster that got its teams from one label
+- a team that created its own namespace, without asking the platform team
+- proof that the boundary between teams holds on every cluster, and is put
+  back when it's broken, by two different loops
 
-Allow about two hours, most of it installing operators on three clusters.
+Allow about two hours, most of it waiting for operators to install.
+[Validated on: the OpenShift, Advanced Cluster Management and OpenShift
+GitOps versions, from the validation run.]
 
 ## Before you start
 
-This tutorial needs more than one cluster, because that's the whole point.
 You need:
 
-- **A hub cluster**, with `cluster-admin`, running **Red Hat OpenShift
-  GitOps** and **Red Hat Advanced Cluster Management**. You install both in
-  step 1.
-- **Two spoke clusters**, with `cluster-admin` on each: one you'll treat as
-  **dev**, one as **prod**. Each runs **Multi-Tenant Operator**, installed in
-  step 2. Two spokes show the overlays; one spoke is enough to see the
-  mechanics if that's all you have.
-- `oc`, `kubectl` and the `argocd` CLI on your machine, and a kubeconfig
-  context for each cluster.
-- The example files:
+- **A hub cluster,** with `cluster-admin`. It runs Red Hat Advanced Cluster
+  Management and Red Hat OpenShift GitOps, which you install in step 1.
+- **Two more clusters,** with `cluster-admin` on each. One will be the
+  development spoke and one the production spoke. [To confirm in the
+  validation run: whether the hub can also act as one of the spokes, so two
+  clusters are enough.]
+- `oc` and `git` on your machine, and a kubeconfig context for each cluster.
+- **Your own fork** of
+  [stakater/mto-blogs](https://github.com/stakater/mto-blogs), public so the
+  hub can read it. You'll commit changes to the team definitions, and the
+  hub delivers what's in your fork.
 
   ```bash
-  git clone https://github.com/stakater/mto-blogs.git
+  git clone https://github.com/<your GitHub user>/mto-blogs.git
   cd mto-blogs/08-try-it-tenants-across-clusters/examples
   ```
 
 Here's what you'll install:
 
-| Component | Where | From | Job |
+| Component | Version | From | Job |
 |---|---|---|---|
-| Red Hat OpenShift GitOps | Hub | Software Catalog (OperatorHub) | Mechanism 1: distribute the tenant to the spokes and keep them in sync |
-| Red Hat Advanced Cluster Management | Hub | Software Catalog (OperatorHub) | Mechanism 2: enforce the tenant across the spokes and report compliance |
-| Multi-Tenant Operator | Each spoke | Software Catalog (OperatorHub) | Reconcile the tenant it receives into namespaces, access and quota |
+| Red Hat Advanced Cluster Management | [version] | Software Catalog (OperatorHub), on the hub | Knows the clusters and their labels, and decides which clusters each team is placed on |
+| Red Hat OpenShift GitOps | [version] | Software Catalog (OperatorHub), on the hub | Delivers each team's definition to its clusters, and keeps it in step with Git |
+| Multi-Tenant Operator | [version] | Software Catalog (OperatorHub), on each spoke | Turns each tenant into the team's namespaces, access and budget, and keeps them right |
 
 The Multi-Tenant Operator Basic edition is free with no expiry, and manages
-up to two tenants per cluster. This tutorial uses one tenant per spoke, well
-inside that.
+up to two tenants. That's exactly what this tutorial uses on each spoke.
+[To confirm: Basic is two tenants on each cluster, so two spokes need no
+license.]
 
-Set a context variable for each cluster now; every step uses them:
+Set these now. Every step uses them:
 
 ```bash
-export HUB=<your hub context>
-export DEV=<your dev spoke context>
-export PROD=<your prod spoke context>
+export HUB=<kubeconfig context of the hub>
+export DEV=<kubeconfig context of the development spoke>
+export PROD=<kubeconfig context of the production spoke>
+export REPO=https://github.com/<your GitHub user>/mto-blogs.git
 ```
 
-### Check the team definition without a cluster
+**People in this tutorial are impersonated.** Where a step acts as Anna, an
+owner of `acme`, it uses `--as anna --as-group acme-owners` with your own
+`cluster-admin` login. That's a learning shortcut, so you don't need an
+identity provider on each spoke. **In production,** people sign in through
+your identity provider, and their groups come from it.
 
-Before any cluster, prove the overlays do what they claim: the same team,
-with a different budget per environment.
+## Step 1: Prepare the hub
+
+The hub needs two things: Advanced Cluster Management, which knows the
+clusters, and OpenShift GitOps, which delivers to them.
+
+In the hub's OpenShift console, go to **Ecosystem → Software Catalog** (on
+older versions, **Operators → OperatorHub**), and install both with the
+defaults:
+
+- **Red Hat OpenShift GitOps.** It creates an Argo CD instance in
+  `openshift-gitops`.
+- **Advanced Cluster Management for Kubernetes.** When it's installed,
+  create its `MultiClusterHub` from the operator's page, with the defaults.
+
+Wait until both are ready:
+
+```bash
+until oc --context "$HUB" -n openshift-gitops get deploy/openshift-gitops-server >/dev/null 2>&1; do sleep 10; done
+oc --context "$HUB" -n openshift-gitops wait deploy/openshift-gitops-server \
+  --for=condition=Available --timeout=600s
+oc --context "$HUB" -n open-cluster-management wait multiclusterhub/multiclusterhub \
+  --for=jsonpath='{.status.phase}'=Running --timeout=1800s
+```
+
+```
+deployment.apps/openshift-gitops-server condition met
+multiclusterhub.operator.open-cluster-management.io/multiclusterhub condition met
+```
+
+Now connect the two.
+[`hub/gitops-clusters.yaml`](examples/hub/gitops-clusters.yaml) tells
+Advanced Cluster Management to register every cluster that has an
+`environment` label in the hub's Argo CD:
+
+```bash
+oc --context "$HUB" apply -f hub/gitops-clusters.yaml
+```
+
+```
+managedclustersetbinding.cluster.open-cluster-management.io/default created
+placement.cluster.open-cluster-management.io/tenancy-clusters created
+gitopscluster.apps.open-cluster-management.io/tenancy-clusters created
+```
+
+**What just happened:** the hub now has both tools, and a rule joining them:
+a cluster with an `environment` label is one OpenShift GitOps may deliver
+to. No cluster has that label yet.
+
+[To confirm with Raffaele: placement by Advanced Cluster Management with
+delivery by OpenShift GitOps is the path Red Hat wants shown.]
+
+## Step 2: Join the spokes to the hub
+
+Import both spokes into Advanced Cluster Management. In the hub's console,
+switch to **Fleet Management** (on older versions, **All Clusters**), go to
+**Infrastructure → Clusters → Import cluster**, and import each one. Then
+set each cluster's name as the hub knows it:
+
+```bash
+oc --context "$HUB" get managedclusters
+```
+
+```
+NAME            HUB ACCEPTED   MANAGED CLUSTER URLS            JOINED   AVAILABLE   AGE
+dev-spoke       true           https://api.dev...:6443         True     True        3m
+local-cluster   true           https://api.hub...:6443         True     True        40m
+prod-spoke      true           https://api.prod...:6443        True     True        2m
+```
+
+```bash
+export DEV_CLUSTER=<name of the development spoke, such as dev-spoke>
+export PROD_CLUSTER=<name of the production spoke, such as prod-spoke>
+```
+
+Label the development spoke only. The production spoke waits until step 6:
+
+```bash
+oc --context "$HUB" label managedcluster "$DEV_CLUSTER" environment=dev
+sleep 30
+oc --context "$HUB" -n openshift-gitops get secrets \
+  -l argocd.argoproj.io/secret-type=cluster
+```
+
+```
+NAME                       TYPE     DATA   AGE
+dev-spoke-cluster-secret   Opaque   3      20s
+```
+
+> 📷 **Screenshot to capture** (`01-hub-clusters-labels.png`): the hub's console, Infrastructure → Clusters, with the hub and both spokes.
+> **Highlight:** the label `environment=dev` on the development spoke.
+
+**What just happened:** the hub knows both spokes, and the label put the
+development spoke in the hub's Argo CD. The production spoke is managed by
+the hub, but nothing delivers to it yet.
+
+**In production,** clusters get their labels when they're provisioned, from
+the cluster's own definition. The access the hub's Argo CD gets on each
+spoke is also yours to narrow. [To confirm in the validation run: what
+access it gets by default, and how to limit it to `Tenant` and `Quota`.]
+
+## Step 3: Install Multi-Tenant Operator on each spoke
+
+Each spoke needs the operator that turns a tenant into a team. On each
+spoke's console, go to **Ecosystem → Software Catalog**, search for
+**multi tenant**, and install **Multi Tenant Operator** with the defaults.
+It installs into the `multi-tenant-operator` namespace.
+
+Then switch on its console, on both spokes. The first line of the loop
+waits until the operator has made its configuration:
+
+```bash
+for CTX in "$DEV" "$PROD"; do
+  until oc --context "$CTX" -n multi-tenant-operator get integrationconfig tenant-operator-config >/dev/null 2>&1; do sleep 10; done
+  oc --context "$CTX" -n multi-tenant-operator patch integrationconfig tenant-operator-config --type merge -p '{
+    "spec": {
+      "components": {"console": true},
+      "accessControl": {"privileged": {"users": ["mto@stakater.com"]}}
+    }}'
+done
+```
+
+```
+integrationconfig.tenantoperator.stakater.com/tenant-operator-config patched
+integrationconfig.tenantoperator.stakater.com/tenant-operator-config patched
+```
+
+**What just happened:** both spokes can now turn a `Tenant` into a team.
+Neither has a tenant yet.
+
+**In production,** the hub installs the operator on each cluster too, the
+same way it delivers the teams, so a new cluster needs nothing done by hand.
+
+## Step 4: Define two teams, once
+
+The teams are already in your fork, under
+[`teams/`](examples/teams/). Each team has a **base**, which is the team
+itself, and an **overlay** per environment, which changes only the budget.
+Here's all of `acme`, in
+[`teams/acme/base/tenant.yaml`](examples/teams/acme/base/tenant.yaml):
+
+```yaml
+apiVersion: tenantoperator.stakater.com/v1beta3
+kind: Tenant
+metadata:
+  name: acme
+spec:
+  quota: acme-quota
+  accessControl:
+    owners:
+      groups:
+        - acme-owners
+    viewers:
+      groups:
+        - acme-viewers
+  namespaces:
+    withTenantPrefix:
+      - apps
+      - build
+      - data
+```
+
+Before any cluster sees them, prove the overlays do what they claim:
 
 ```bash
 make test
 ```
 
 ```
-ok   | dev: Tenant acme
-ok   | prod: Tenant acme
-ok   | dev: owners group
-ok   | prod: owners group
-ok   | dev: small cpu budget
-ok   | prod: large cpu budget
-ok   | dev: marked as dev
-ok   | prod: marked as prod
+ok   | acme dev: the Tenant
+ok   | acme prod: the Tenant
+ok   | acme: Tenant identical in dev and prod
+ok   | acme dev: smaller cpu budget
+ok   | acme prod: larger cpu budget
 ...
-PASS: every overlay renders the same team with its own budget.
+PASS: every team renders the same in each environment, with its own budget.
 ```
 
-**What just happened:** `make test` ran `kubectl kustomize` on each overlay
-and checked the result — the tenant's identity is the same in both, and only
-the quota numbers differ. This is the quick gate. The rest of the tutorial is
-the full proof, on real clusters.
+**What just happened:** `make test` rendered each team for each environment
+and compared them. The `Tenant` is identical in development and production,
+and only the `Quota`'s numbers differ. `make render` shows exactly what each
+cluster will receive.
 
-## Step 1: Prepare the hub
+## Step 5: Put both teams on the development spoke
 
-On the hub, install both distribution tools. In the OpenShift console, go to
-**Ecosystem → Software Catalog** (on older versions, **Operators →
-OperatorHub**), and install, with the defaults:
+Two files do the placing.
+[`hub/placements.yaml`](examples/hub/placements.yaml) defines the
+environments: the clusters labeled `environment=dev`, and those labeled
+`environment=prod`. [`hub/teams.yaml`](examples/hub/teams.yaml) is one
+`ApplicationSet` that delivers each team's overlay to every cluster in its
+environment.
 
-- **Red Hat OpenShift GitOps** — it creates an Argo CD instance in
-  `openshift-gitops`.
-- **Advanced Cluster Management for Kubernetes** — after it installs, create
-  its `MultiClusterHub` instance from the operator's page, and wait until it
-  reports running.
+Apply both, pointing the second at your fork:
 
 ```bash
-oc --context "$HUB" -n openshift-gitops \
-  wait deploy/openshift-gitops-server --for=condition=Available --timeout=600s
-oc --context "$HUB" -n open-cluster-management \
-  wait multiclusterhub/multiclusterhub --for=condition=Complete --timeout=1200s
-```
-
-> 📷 **Screenshot to capture** (`01-rhacm-clusters.png`): the RHACM console,
-> Infrastructure → Clusters, once the spokes are imported in step 2.
-> **Highlight:** the `stakater.com/environment` label on each spoke.
-
-## Step 2: Install Multi-Tenant Operator on each spoke
-
-On each spoke, install **Multi Tenant Operator** from the Software Catalog
-with the defaults; it installs into the `multi-tenant-operator` namespace.
-Then switch on the Template Operator it ships with, and its console, on each:
-
-```bash
-for CTX in "$DEV" "$PROD"; do
-  until oc --context "$CTX" -n multi-tenant-operator \
-    get integrationconfig tenant-operator-config >/dev/null 2>&1; do sleep 10; done
-  oc --context "$CTX" -n multi-tenant-operator \
-    patch integrationconfig tenant-operator-config --type merge -p '{
-      "spec": {"components": {"console": true}}}'
-done
-```
-
-**What just happened:** each spoke now has Multi-Tenant Operator, ready to
-turn a `Tenant` into namespaces, access and quota. Neither spoke has a tenant
-yet.
-
-Now import both spokes into Advanced Cluster Management, and label them by
-environment. In the RHACM console, **Infrastructure → Clusters → Import
-cluster**, import the dev and prod spokes, and give each a label
-`stakater.com/environment` of `dev` or `prod`, and `stakater.com/tenancy` of
-`true`. You can also set the labels from the hub once they're imported:
-
-```bash
-oc --context "$HUB" label managedcluster <dev-cluster-name> \
-  stakater.com/environment=dev stakater.com/tenancy=true --overwrite
-oc --context "$HUB" label managedcluster <prod-cluster-name> \
-  stakater.com/environment=prod stakater.com/tenancy=true --overwrite
-```
-
-**In production,** you'd import clusters as part of provisioning them, and
-set these labels from the cluster's definition, not by hand.
-
----
-
-You'll now distribute the same team two ways. Steps 3 to 5 use OpenShift
-GitOps. Steps 6 to 8 use Advanced Cluster Management. Each stands on its own;
-do them in either order, and clean up between if you want a blank slate.
-
-## Step 3: Register the spokes in Argo CD
-
-OpenShift GitOps needs to know the spokes, with the same labels, so one
-`ApplicationSet` can target them. Add each spoke to Argo CD and label it:
-
-```bash
-argocd login --core        # uses your current kubeconfig against the hub
-argocd cluster add "$DEV"  --name dev-spoke  --label stakater.com/tenancy=true --label stakater.com/environment=dev
-argocd cluster add "$PROD" --name prod-spoke --label stakater.com/tenancy=true --label stakater.com/environment=prod
-```
-
-```bash
-argocd cluster list
-```
-
-```
-SERVER                          NAME         STATUS      ...
-https://api.dev...:6443         dev-spoke    Successful
-https://api.prod...:6443        prod-spoke   Successful
-https://kubernetes.default.svc  in-cluster   Successful
-```
-
-**What just happened:** Argo CD on the hub can now reach both spokes, and
-each carries its environment as a label. Nothing is deployed yet.
-
-## Step 4: Distribute the team with one ApplicationSet
-
-[`argocd/applicationset.yaml`](examples/argocd/applicationset.yaml) is one
-`ApplicationSet`. Its cluster generator selects every spoke labelled
-`stakater.com/tenancy: "true"`, and renders one Application per spoke,
-pointing at the overlay for that spoke's environment.
-
-```bash
-oc --context "$HUB" apply -f argocd/applicationset.yaml
-sleep 20
+oc --context "$HUB" apply -f hub/placements.yaml
+sed "s|https://github.com/stakater/mto-blogs.git|$REPO|" hub/teams.yaml \
+  | oc --context "$HUB" apply -f -
+sleep 60
 oc --context "$HUB" -n openshift-gitops get applications
 ```
 
 ```
-NAME                   SYNC STATUS   HEALTH STATUS
-acme-tenant-dev-spoke  Synced        Healthy
-acme-tenant-prod-spoke Synced        Healthy
+NAME               SYNC STATUS   HEALTH STATUS
+acme-dev-spoke     Synced        Healthy
+globex-dev-spoke   Synced        Healthy
 ```
 
-> 📷 **Screenshot to capture** (`02-argocd-applicationset.png`): Argo CD,
-> Applications, both `acme-tenant-*` Applications Synced and Healthy.
-> **Highlight:** the two generated Applications, one per spoke.
-
-**What just happened:** from one `ApplicationSet`, Argo CD created one
-Application per spoke, each pointing at the right overlay — dev to the dev
-spoke, prod to the prod spoke — and synced the `Tenant` and `Quota` onto each.
-
-## Step 5: See the same team, with its own budget, on each spoke
-
-The tenant now exists on both spokes. Look at what Multi-Tenant Operator made
-of it:
+The hub sent two objects per team. Look at what Multi-Tenant Operator made
+of them on the spoke:
 
 ```bash
-oc --context "$DEV"  get tenant acme
-oc --context "$PROD" get tenant acme
-oc --context "$DEV"  get quota acme-quota -o jsonpath='dev  cpu={.spec.resourcequota.hard.requests\.cpu} pods={.spec.resourcequota.hard.pods}{"\n"}'
-oc --context "$PROD" get quota acme-quota -o jsonpath='prod cpu={.spec.resourcequota.hard.requests\.cpu} pods={.spec.resourcequota.hard.pods}{"\n"}'
+oc --context "$DEV" get tenants
+oc --context "$DEV" get namespaces -l stakater.com/tenant \
+  -o custom-columns=NAMESPACE:.metadata.name,TENANT:.metadata.labels.stakater\\.com/tenant
 ```
 
 ```
-dev  cpu=2 pods=5
-prod cpu=20 pods=50
+NAME     AGE
+acme     40s
+globex   40s
+NAMESPACE     TENANT
+acme-apps     acme
+acme-build    acme
+acme-data     acme
+globex-apps   globex
 ```
 
-Same tenant, same `acme-apps` namespace and same owner and viewer groups on
-both; the budget small on dev and large on prod. In each spoke's
-Multi-Tenant Operator console, the **Tenants** page shows `acme` with its
-environment's quota:
-
-> 📷 **Screenshot to capture** (`03-mto-console-dev.png`,
-> `04-mto-console-prod.png`): the Multi-Tenant Operator console on each spoke,
-> Tenants → acme → Quota. **Highlight:** the dev budget (cpu 2, pods 5) on
-> one, the prod budget (cpu 20, pods 50) on the other.
-
-Now change the team once, in the base, and watch both spokes follow. Add a
-second namespace to [`base/tenant.yaml`](examples/base/tenant.yaml):
-
-```yaml
-  namespaces:
-    withTenantPrefix:
-      - apps
-      - build        # add this line
-```
-
-Commit and push, then let Argo CD sync (or **Refresh** each Application):
+And the team's people have their access. Anna, an owner of `acme`, can
+deploy in her team's namespace:
 
 ```bash
-oc --context "$DEV"  get namespaces | grep acme-
-oc --context "$PROD" get namespaces | grep acme-
+oc --context "$DEV" auth can-i create deployments -n acme-apps \
+  --as anna --as-group acme-owners
 ```
 
 ```
-acme-apps
-acme-build
+yes
 ```
 
-**What just happened:** one change to the base reached both clusters, because
-both read the same base. You changed the team once, not once per cluster.
-
-## Step 6: Hand the same team to Advanced Cluster Management
-
-The same team, distributed as governance instead of GitOps. If you did steps
-3 to 5, remove the `ApplicationSet` first so the two mechanisms don't both
-own the tenant:
+In the spoke's Multi-Tenant Operator console, the **Tenants** page shows
+both teams. Open the console's route, and sign in as `mto@stakater.com` with
+the password Multi-Tenant Operator generated:
 
 ```bash
-oc --context "$HUB" -n openshift-gitops delete -f argocd/applicationset.yaml
+oc --context "$DEV" -n multi-tenant-operator get routes | grep console
+oc --context "$DEV" -n multi-tenant-operator get secret tenant-operator-console-credentials \
+  -o jsonpath='{.data.passwordPlainText}' | base64 -d; echo
 ```
 
-Advanced Cluster Management delivers Policies from the hub into a namespace
-there. Create it, and make sure the spokes are in a cluster set its
-Placement can select — the default `default` cluster set is fine for this
-tutorial:
+> 📷 **Screenshot to capture** (`02-mto-console-dev-tenants.png`): the Multi-Tenant Operator console on the development spoke, Tenants page, with `acme` and `globex`.
+> **Highlight:** the row `acme`, with its quota.
+
+**What just happened:** Advanced Cluster Management matched the development
+spoke to the `dev-clusters` placement. OpenShift GitOps delivered each
+team's development overlay there: one `Tenant` and one `Quota` per team.
+Multi-Tenant Operator created the namespaces and gave each group its
+access. The hub never sent a namespace or a role binding.
+
+**In production,** connect the console to your identity provider and delete
+this built-in account: anyone who can read Secrets in
+`multi-tenant-operator` can read its password, and it sees every tenant.
+
+## Step 6: Bring in the production spoke with one label
+
+The production spoke has the operator and no teams. Placing it takes one
+label, on the hub:
 
 ```bash
-oc --context "$HUB" create namespace tenancy-policies
-oc --context "$HUB" -n tenancy-policies apply -f - <<'EOF'
-apiVersion: cluster.open-cluster-management.io/v1beta2
-kind: ManagedClusterSetBinding
-metadata:
-  name: default
-spec:
-  clusterSet: default
-EOF
+oc --context "$HUB" label managedcluster "$PROD_CLUSTER" environment=prod
+sleep 90
+oc --context "$HUB" -n openshift-gitops get applications
 ```
 
-## Step 7: Enforce the team with a Policy
+```
+NAME                SYNC STATUS   HEALTH STATUS
+acme-dev-spoke      Synced        Healthy
+acme-prod-spoke     Synced        Healthy
+globex-dev-spoke    Synced        Healthy
+globex-prod-spoke   Synced        Healthy
+```
 
-[`rhacm/policy.yaml`](examples/rhacm/policy.yaml) is the dev environment: a
-`Policy` that enforces the `Tenant` and its `Quota`, a `Placement` that binds
-it to clusters labelled `stakater.com/environment: dev`, and the
-`PlacementBinding` that ties them together.
+Both teams arrived, and they're the same teams, with the production budget:
 
 ```bash
-oc --context "$HUB" apply -f rhacm/policy.yaml
-sleep 30
-oc --context "$HUB" -n tenancy-policies get policy acme-tenant-dev \
-  -o jsonpath='{.status.compliant}{"\n"}'
-```
-
-```
-Compliant
-```
-
-> 📷 **Screenshot to capture** (`05-rhacm-policy-compliant.png`): the RHACM
-> console, Governance, the `acme-tenant-dev` policy, Compliant on the dev
-> spoke. **Highlight:** the compliance status.
-
-On the dev spoke, the tenant is there, exactly as the GitOps path made it:
-
-```bash
-oc --context "$DEV" get tenant acme
-oc --context "$DEV" get quota acme-quota -o jsonpath='cpu={.spec.resourcequota.hard.requests\.cpu}{"\n"}'
-```
-
-```
-cpu=2
-```
-
-**What just happened:** Advanced Cluster Management placed the Policy on every
-cluster the Placement selected — the dev spoke — and enforced the tenant
-there. The prod environment is the same file with the prod quota numbers and
-a Placement that selects `prod`; apply it the same way.
-
-**In production,** you'd generate these Policies from the same overlays with
-the RHACM Policy Generator, so the overlay stays the single source of truth
-rather than being written into the Policy by hand.
-
-## Step 8: Watch drift get corrected
-
-Governance re-applies what drifts. Delete the Quota directly on the spoke,
-and watch Advanced Cluster Management put it back:
-
-```bash
-oc --context "$DEV" delete quota acme-quota
-sleep 60
-oc --context "$DEV" get quota acme-quota
-```
-
-```
-NAME         AGE
-acme-quota   20s
-```
-
-> 📷 **Screenshot to capture** (`06-rhacm-policy-drift.png`): the RHACM
-> console, Governance, the policy going NonCompliant and back to Compliant.
-> **Highlight:** the status change, before and after.
-
-**What just happened:** the Policy is set to `enforce`, so when the spoke
-drifted from the tenant, Advanced Cluster Management reconciled it back.
-OpenShift GitOps does the same with self-heal; both correct drift, and both
-report which clusters are in step.
-
-## Which mechanism
-
-Both carry the same base and overlays to the same clusters. The difference is
-which platform you already run:
-
-| | OpenShift GitOps | Advanced Cluster Management |
-|---|---|---|
-| The tenant lives | with the rest of your GitOps config | with the rest of your governance |
-| You see | sync status per cluster, in Argo CD | compliance per cluster, in the RHACM console |
-| Picks the overlay by | a cluster label, in the `ApplicationSet` | a `Placement` label selector |
-| Good fit when | you already deliver platform config by GitOps | you already manage the fleet with RHACM |
-
-Many platforms run both, and RHACM can drive OpenShift GitOps directly. The
-point of this tutorial is that the team — the base and its overlays — is the
-same either way.
-
-## Clean up
-
-```bash
-# Mechanism 1, if it's still there
-oc --context "$HUB" -n openshift-gitops delete -f argocd/applicationset.yaml --ignore-not-found
-argocd cluster rm "$DEV"  2>/dev/null || true
-argocd cluster rm "$PROD" 2>/dev/null || true
-
-# Mechanism 2
-oc --context "$HUB" delete -f rhacm/policy.yaml --ignore-not-found
-oc --context "$HUB" delete namespace tenancy-policies --ignore-not-found
-
-# The tenant on each spoke. Multi-Tenant Operator keeps a deleted tenant's
-# namespaces, so delete those too.
 for CTX in "$DEV" "$PROD"; do
-  oc --context "$CTX" delete tenant acme --ignore-not-found
-  oc --context "$CTX" delete quota acme-quota --ignore-not-found
-  oc --context "$CTX" delete namespace acme-apps acme-build --ignore-not-found
+  oc --context "$CTX" get quotas.tenantoperator.stakater.com acme-quota \
+    -o jsonpath='cpu={.spec.resourcequota.hard.requests\.cpu} pods={.spec.resourcequota.hard.pods}{"\n"}'
 done
 ```
 
-To remove the operators as well, uninstall them from **Installed Operators**
-on each cluster.
+```
+cpu=2 pods=10
+cpu=20 pods=50
+```
+
+> 📷 **Screenshot to capture** (`03-mto-console-prod-tenants.png`): the Multi-Tenant Operator console on the production spoke, Tenants page, with `acme` and `globex`.
+> **Highlight:** the row `acme`, with its larger quota.
+
+> 📷 **Screenshot to capture** (`04-hub-team-placements.png`): OpenShift GitOps on the hub, Applications, with `acme` and `globex` on each spoke, all Synced and Healthy.
+> **Highlight:** the two Applications for `acme`, one per spoke.
+
+**What just happened:** the label did two things. It registered the cluster
+in the hub's Argo CD, and it matched the `prod-clusters` placement, so the
+`ApplicationSet` rendered an Application per team for it, with the
+production overlay. Nobody wired the cluster up team by team.
+
+## Step 7: Change a team once
+
+The `acme` team gets a group of editors. That's one change, in the base.
+Add the `editors` lines to `teams/acme/base/tenant.yaml`:
+
+```yaml
+  accessControl:
+    owners:
+      groups:
+        - acme-owners
+    editors:              # add these three lines
+      groups:
+        - acme-editors
+    viewers:
+      groups:
+        - acme-viewers
+```
+
+Check it, then commit and push to your fork:
+
+```bash
+make test
+git commit -am "acme: add an editors group"
+git push
+```
+
+Argo CD picks the change up within a few minutes. Then Ben, an editor, has
+access on both clusters:
+
+```bash
+sleep 240
+for CTX in "$DEV" "$PROD"; do
+  oc --context "$CTX" auth can-i create deployments -n acme-apps \
+    --as ben --as-group acme-editors
+done
+```
+
+```
+yes
+yes
+```
+
+**What just happened:** one commit changed the team, and each cluster's
+operator gave the new group its access in every one of the team's
+namespaces. You changed the team once, not once per namespace per cluster.
+
+## Step 8: Let a team create its own namespace
+
+Anna needs a scratch namespace on the development spoke. She doesn't open a
+pull request for it. She creates it, on the spoke, as an owner of `acme`:
+
+```bash
+oc --context "$DEV" create namespace acme-scratch \
+  --as anna --as-group acme-owners
+```
+
+```
+namespace/acme-scratch created
+```
+
+[To confirm with engineering: that a tenant owner can create a namespace
+this way while the `Tenant` is managed from Git, the exact command, and that
+the namespace survives the next sync from the hub. If it doesn't work this
+way, this step changes or comes out.]
+
+It joined her team, with the team's access:
+
+```bash
+oc --context "$DEV" get namespace acme-scratch \
+  -o jsonpath='tenant={.metadata.labels.stakater\.com/tenant}{"\n"}'
+oc --context "$DEV" auth can-i create deployments -n acme-scratch \
+  --as anna --as-group acme-owners
+```
+
+```
+tenant=acme
+yes
+```
+
+Sync the team from the hub, and check the namespace is still there:
+
+```bash
+oc --context "$HUB" -n openshift-gitops annotate application "acme-$DEV_CLUSTER" \
+  argocd.argoproj.io/refresh=hard --overwrite
+sleep 60
+oc --context "$DEV" get namespace acme-scratch
+```
+
+```
+NAME           STATUS   AGE
+acme-scratch   Active   2m
+```
+
+> 📷 **Screenshot to capture** (`05-mto-console-dev-namespaces.png`): the Multi-Tenant Operator console on the development spoke, Namespaces page, with `acme`'s namespaces.
+> **Highlight:** the namespace `acme-scratch`, under the tenant `acme`.
+
+**What just happened:** the namespace was never in Git, so the hub couldn't
+have sent it. Multi-Tenant Operator, on the spoke, saw an owner of `acme`
+create it, made it part of the tenant, and counted it against the team's
+one budget. [To confirm with engineering: the quota is one budget across
+all the tenant's namespaces.] It exists only on this cluster, which is what
+Anna wanted.
+
+## Step 9: See the boundary hold on every cluster
+
+Anna owns `acme`, on the clusters `acme` is placed on. She has nothing in
+`globex`, on either:
+
+```bash
+for CTX in "$DEV" "$PROD"; do
+  oc --context "$CTX" auth can-i create deployments -n globex-apps \
+    --as anna --as-group acme-owners
+  oc --context "$CTX" auth can-i get pods -n globex-apps \
+    --as anna --as-group acme-owners
+done
+```
+
+```
+no
+no
+no
+no
+```
+
+**What just happened:** nothing, which is the point. Each cluster's operator
+gave `acme`'s groups access to `acme`'s namespaces only, so the boundary is
+the same on every cluster without anyone writing it per cluster.
+
+## Step 10: Break it twice
+
+Two loops keep a cluster right. Break something each one covers.
+
+**First, inside the tenant.** Remove the owners' access from one of `acme`'s
+namespaces on the development spoke, as a cluster administrator might by
+mistake:
+
+```bash
+RB=$(oc --context "$DEV" -n acme-apps get rolebindings \
+  -o jsonpath='{.items[?(@.subjects[0].name=="acme-owners")].metadata.name}')
+oc --context "$DEV" -n acme-apps delete rolebinding $RB
+sleep 30
+oc --context "$DEV" auth can-i create deployments -n acme-apps \
+  --as anna --as-group acme-owners
+```
+
+```
+yes
+```
+
+**What just happened:** Multi-Tenant Operator put the role binding back, on
+the spoke. The hub wasn't involved: the `Tenant` hadn't changed, so Argo CD
+saw nothing to do.
+
+**Then, the tenant itself.** Delete `globex` from the development spoke:
+
+```bash
+oc --context "$DEV" delete tenant globex
+sleep 60
+oc --context "$DEV" get tenant globex
+```
+
+```
+NAME     AGE
+globex   30s
+```
+
+**What just happened:** this time the hub acted. The `Tenant` in Git was
+missing from the cluster, so Argo CD delivered it again, and Multi-Tenant
+Operator took the team's namespace back into it. Each loop covers what the
+other can't see.
+
+## Clean up
+
+Remove things in this order:
+
+```bash
+# The teams' delivery, and what joins the hub's two tools
+oc --context "$HUB" -n openshift-gitops delete applicationset teams
+oc --context "$HUB" delete -f hub/placements.yaml
+oc --context "$HUB" delete -f hub/gitops-clusters.yaml
+
+# The labels
+oc --context "$HUB" label managedcluster "$DEV_CLUSTER" "$PROD_CLUSTER" environment-
+
+# The teams on each spoke, if the hub left any. Multi-Tenant Operator keeps
+# a deleted tenant's namespaces, so delete those too.
+for CTX in "$DEV" "$PROD"; do
+  oc --context "$CTX" delete tenant acme globex --ignore-not-found
+  oc --context "$CTX" delete quotas.tenantoperator.stakater.com acme-quota globex-quota --ignore-not-found
+  oc --context "$CTX" delete namespace acme-apps acme-build acme-data acme-scratch globex-apps --ignore-not-found
+done
+```
+
+To detach the spokes, remove them from **Infrastructure → Clusters** on the
+hub. To remove the operators as well, uninstall them from **Installed
+Operators** on each cluster.
 
 ## What you built
 
-One team, defined once in Git, running the same way on two clusters — same
-namespaces, same access — and differing only in budget, by one overlay per
-environment. You distributed it two ways, and both kept the clusters in step
-and corrected drift.
+Two teams, each defined once in Git, running on two clusters. The hub
+decided where each team exists: a label placed a cluster, and the teams
+followed. Multi-Tenant Operator decided what each team is there: it built
+the namespaces, the access and the budget from two small objects, let a
+team add a namespace on its own, and put back what was changed.
 
-| You did | What took it over | By hand, per cluster |
+| You did | The hub | Multi-Tenant Operator |
 |---|---|---|
-| Wrote the team once, with an overlay per environment | One definition, reconciled on every cluster | Create and maintain the team on each cluster |
-| Added a namespace to the base | Both clusters got it | Add it on every cluster |
-| Pointed one `ApplicationSet` / `Policy` at the spokes | The right overlay reached the right cluster | Decide and apply per-cluster differences by hand |
-| Deleted a resource on a spoke | It was put back | Notice the drift, if anyone ever does |
+| Labeled a cluster | Placed both teams on it | Built each team there |
+| Committed one change to a team | Delivered it to every cluster | Applied it in every namespace of the team |
+| Created a namespace as a tenant owner | | Made it part of the tenant |
+| Deleted a role binding on a spoke | | Put it back |
+| Deleted a `Tenant` on a spoke | Put it back | Took the team's namespaces back into it |
 
-What this tutorial didn't do is carry a team's slice of another *tool* across
-clusters — one Vault namespace, or one Argo CD AppProject, for a team that
-spans clusters. That's a different question, covered in a later article in
-this series. Here, the team itself is the same on every cluster, and that's
-the ground the rest stands on.
+What this tutorial left out on purpose: a team's slice of other tools, such
+as a Vault namespace or an Argo CD AppProject. Those belong to one cluster
+today, and the earlier tutorials in this series build them there. It also
+used one way to deliver from the hub. Advanced Cluster Management's own
+policies can deliver the same two objects, and the split of work stays the
+same.
 
-The free edition manages two tenants per cluster. When a third team arrives
-on a cluster, that's where Multi-Tenant Operator Enterprise comes in.
+The free edition stops at two tenants. When a third team arrives, that's
+where Multi-Tenant Operator Enterprise comes in.
 
 ## About Multi-Tenant Operator
 

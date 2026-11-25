@@ -7,8 +7,8 @@ prose.
 
 **Status:** proposal. Not agreed yet. [Post 7](post.md) has been rewritten from it, with each open question below
 marked in the text as "[To confirm: ...]".
-[Post 8](../08-try-it-tenants-across-clusters/post.md) was written before
-this and doesn't follow it yet.
+[Post 8](../08-try-it-tenants-across-clusters/post.md) has been rewritten
+from it too, the same way. Neither has run on clusters.
 
 ## The story
 
@@ -120,7 +120,7 @@ provider is needed. The "In production" note points to the sign-in articles.
 |---|---|---|---|
 | 1 | The hub is ready: Advanced Cluster Management and OpenShift GitOps installed and connected | | |
 | 2 | Both spokes have joined the hub; only the dev spoke is labeled for tenancy | | The hub's cluster list, with the labels |
-| 3 | Every labeled spoke gets Multi-Tenant Operator, installed from the hub | The operator is part of what the fleet delivers | |
+| 3 | Both spokes have Multi-Tenant Operator, installed from the Software Catalog like the earlier tutorials. Installing it from the hub is the "In production" note | | |
 | 4 | Two teams defined once, in the reader's fork: a base and an overlay per environment. `make test` passes without a cluster | | |
 | 5 | Both teams appear on the dev spoke | Point 1 | Multi-Tenant Operator console on dev, Tenants page (required) |
 | 6 | The prod spoke gets its label, and both teams arrive with the production budget | Point 3 | Multi-Tenant Operator console on prod (required); the hub showing both placements |

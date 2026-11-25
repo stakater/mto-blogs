@@ -1,0 +1,16 @@
+# The team's budget, with middle-of-the-road numbers. Each overlay replaces
+# them for its environment. The name stays the same, so the Tenant's
+# `spec.quota: globex-quota` holds on every cluster. The sync wave makes the
+# hub create the Quota before the Tenant that names it.
+apiVersion: tenantoperator.stakater.com/v1beta1
+kind: Quota
+metadata:
+  name: globex-quota
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  resourcequota:
+    hard:
+      requests.cpu: "4"
+      requests.memory: 8Gi
+      pods: "20"

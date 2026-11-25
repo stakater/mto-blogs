@@ -1,22 +1,18 @@
-# Multi-cluster tenancy example — targets a reader or CI can run.
+# Tenancy across a fleet: targets a reader or CI can run.
 #
-#   make render   show what each cluster would receive
-#   make test     prove the pattern holds, without a cluster
+#   make render   show what each environment's clusters receive, per team
+#   make test     prove the overlays hold, without a cluster
 #
-# `make test` is the cheap, deterministic gate. The full proof is the
-# tutorial's validation run on real clusters.
+# `make test` is the quick gate. The full proof is the tutorial's validation
+# run on real clusters.
 
-.PHONY: render render-dev render-prod test
+.PHONY: render test
 
-render: render-dev render-prod
-
-render-dev:
-	@echo "## dev cluster receives:"
-	@kubectl kustomize overlays/dev
-
-render-prod:
-	@echo "## prod cluster receives:"
-	@kubectl kustomize overlays/prod
+render:
+	@for team in acme globex; do for env in dev prod; do \
+	  echo "## $$team, on $$env clusters:"; \
+	  kubectl kustomize teams/$$team/overlays/$$env; echo; \
+	done; done
 
 test:
 	@./test/render_test.sh

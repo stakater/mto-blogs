@@ -247,8 +247,8 @@ On a production spoke, it's the same team with the production budget:
 The hub shows where each team has been placed, and whether each cluster is
 in step with Git:
 
-> 📷 **Screenshot to capture** (`04-hub-team-placements.png`): the hub's console, showing `acme` delivered to the development and production spokes, both in step.
-> **Highlight:** the two clusters `acme` is placed on.
+> 📷 **Screenshot to capture** (`04-hub-team-placements.png`): OpenShift GitOps on the hub, Applications, with `acme` and `globex` on each spoke, all Synced and Healthy.
+> **Highlight:** the two Applications for `acme`, one per spoke.
 
 ## Guardrails for the fleet owner
 

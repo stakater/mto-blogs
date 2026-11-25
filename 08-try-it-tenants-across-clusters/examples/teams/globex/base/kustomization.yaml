@@ -1,0 +1,7 @@
+# The team, defined once. Overlays build on this base and change only what
+# their environment needs.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - quota.yaml
+  - tenant.yaml

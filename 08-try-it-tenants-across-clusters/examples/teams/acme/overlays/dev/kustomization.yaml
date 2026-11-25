@@ -1,13 +1,11 @@
-# The production cluster. Same team as everywhere else; a larger budget. The
-# only thing this overlay changes is the Quota's numbers. Any other
-# per-environment difference — a stricter guardrail on the Tenant, an extra
-# network policy — would be expressed here the same way.
+# The dev environment. Same team as everywhere else, with a smaller budget. The
+# only thing this overlay changes is the Quota's numbers.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ../../base
 commonAnnotations:
-  stakater.com/environment: prod
+  stakater.com/environment: dev
 patches:
   - target:
       kind: Quota
@@ -15,10 +13,10 @@ patches:
     patch: |-
       - op: replace
         path: /spec/resourcequota/hard/requests.cpu
-        value: "20"
+        value: "2"
       - op: replace
         path: /spec/resourcequota/hard/requests.memory
-        value: 40Gi
+        value: 4Gi
       - op: replace
         path: /spec/resourcequota/hard/pods
-        value: "50"
+        value: "10"
