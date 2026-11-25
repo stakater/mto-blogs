@@ -1,0 +1,20 @@
+# The acme team, defined once. This is the tenant's identity: who the team
+# is, which namespaces it owns, and who may act for it. It is the same on
+# every cluster the team runs on. What differs per environment — how much
+# the team may consume — lives in the Quota, which each overlay patches.
+apiVersion: tenantoperator.stakater.com/v1beta3
+kind: Tenant
+metadata:
+  name: acme
+spec:
+  quota: acme-quota
+  accessControl:
+    owners:
+      groups:
+        - acme-owners
+    viewers:
+      groups:
+        - acme-viewers
+  namespaces:
+    withTenantPrefix:
+      - apps
