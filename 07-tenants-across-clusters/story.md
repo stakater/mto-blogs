@@ -5,10 +5,10 @@ the story, for the three authors to agree before the posts are rewritten. It
 also holds the outline for both posts, so we agree the argument before the
 prose.
 
-**Status:** proposal. Not agreed yet. The current drafts of
-[post 7](post.md) and [post 8](../08-try-it-tenants-across-clusters/post.md)
-were written before this and don't follow it. They get rewritten once the
-story is agreed and the facts below are confirmed.
+**Status:** proposal. Not agreed yet. [Post 7](post.md) has been rewritten from it, with each open question below
+marked in the text as "[To confirm: ...]".
+[Post 8](../08-try-it-tenants-across-clusters/post.md) was written before
+this and doesn't follow it yet.
 
 ## The story
 

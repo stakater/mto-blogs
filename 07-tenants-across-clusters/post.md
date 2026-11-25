@@ -5,109 +5,118 @@ Outlet: Red Hat Developer (explainer), then the Stakater blog, canonical link ba
 Its tutorial is post 8, "Hands-on: one tenant, on every cluster".
 Authors: Ayesha Arshad (Stakater), Rasheed Amir (Stakater), Raffaele Spazzoli (Red Hat).
 Target: 1,500 to 2,000 words.
-Status: DRAFT. Not yet validated on clusters; see the tutorial for the gate.
+Status: DRAFT, rewritten from story.md. Not validated on clusters. Every
+"[To confirm: ...]" in the text is an open question from story.md; each one
+is resolved, and its bracket removed, before review.
 Title options:
   - One tenant, on every cluster
-  - The same team, the same way, on every OpenShift cluster
-  - Define a team once, run it on every cluster
+  - Tenancy for a fleet: one team, every OpenShift cluster
+  - The hub knows your clusters. What knows your teams?
 -->
 
-A platform team runs more than one OpenShift cluster. There's a development
-cluster and a production cluster, often a staging one between them, and
-sometimes a cluster per region. The same application teams work across them:
-the `acme` team builds on the development cluster and runs on the production
-one. Each team should look the same on every cluster it touches — the same
-namespaces, the same access, the same guardrails — and differ only where it
-has to, such as a larger budget in production.
+A platform team runs a fleet of OpenShift clusters: a hub with Red Hat
+Advanced Cluster Management, and a dozen spoke clusters for development,
+production and each region. Forty application teams work across them. The
+`acme` team builds on a development cluster and runs on two production ones.
 
-Keeping that true by hand is the problem. Each cluster has its own API
-server, so each team's namespaces, roles and quota have to be created on
-every cluster and kept in step as the team changes. Add a namespace for a
-team, and you add it on every cluster. Change who's on the team, and you
-change it everywhere. Miss one cluster, and the team is subtly different
-there — usually the one you notice during an incident.
+The hub already knows every cluster, and can send configuration to any of
+them. Yet tenancy is still done cluster by cluster. A team isn't one thing
+the hub can send. It's a set of namespaces, role bindings and quotas, copied
+to each cluster and kept in step there. And part of what a team needs can't
+be sent at all, because it happens on the cluster, after the hub has done
+its work: a team adds a namespace, and something has to give it the right
+access and count it against the right budget.
 
-This article shows a different approach. You define each team once, as a
-**tenant**, and keep that definition in Git. One cluster distributes it to
-every other cluster, and Multi-Tenant Operator on each of them makes it real
-— the same team, the same way, everywhere, with per-cluster differences kept
-to a small, deliberate overlay.
+This article shows a different split of the work. You define each team once,
+in Git, as a **tenant**. The hub decides which clusters a team is on. On
+each of those clusters, Multi-Tenant Operator turns the tenant into the
+team's namespaces, access and budget, and keeps them right from then on.
 
-The tenant comes from **Multi-Tenant Operator**, a Red Hat certified
-operator from Stakater. It's a commercial product, with a free Basic edition
-that manages up to two tenants, with no expiry. It's installed on each
-cluster and governs that cluster. The distribution is done by tools you
-already run on OpenShift: **Red Hat OpenShift GitOps** or **Red Hat Advanced
-Cluster Management**.
+The tenant comes from **Multi-Tenant Operator**, a Red Hat certified operator
+from Stakater. It's a commercial product, with a free Basic edition that
+manages up to two tenants, with no expiry. It runs on every spoke. The hub
+is what you already run: Red Hat Advanced Cluster Management and Red Hat
+OpenShift GitOps.
 
 **In this article:**
 
-- what keeping teams consistent across clusters costs today
-- the idea: one tenant definition, an overlay per cluster
-- how it works: from a hub cluster to every other, two ways
-- what stays local to each cluster, and what doesn't
-- the guardrails a platform owner will ask about
+- what one team costs across a fleet today, and where that breaks down
+- the idea: the hub places a team, the tenant defines it
+- how it works, with two loops that keep each cluster right
+- what the platform team sees on each cluster
+- the guardrails a fleet owner will ask about
 
-**Who it's for:** platform engineers and architects who run more than one
-OpenShift cluster for the same teams, and the people who own the fleet. You
-should know OpenShift namespaces and RBAC, and have met GitOps or Advanced
-Cluster Management. If Multi-Tenant Operator is new to you, this is a good
-place to meet it: the article introduces it from the ground up.
+**Who it's for:** platform engineers and architects who run a hub and spoke
+clusters for the same teams, and the people who own the fleet. You should
+know OpenShift namespaces and RBAC, and have met Advanced Cluster Management
+or OpenShift GitOps. If Multi-Tenant Operator is new to you, this is a good
+place to meet it: the article introduces it from the ground up. You don't
+need the earlier articles in this series.
 
 **Want to build it?** The companion tutorial,
 [Hands-on: one tenant, on every cluster](https://github.com/stakater/mto-blogs/tree/main/08-try-it-tenants-across-clusters),
-takes you through it on your own clusters. This article explains the why and
-the how, so you know what you're building.
+takes you through every step on your own clusters. This article explains the
+why and the how, so you know what you're building.
 
 ### Why this is a separate article
 
-Earlier articles in this series carried one team into one more tool — its
-secrets, its sign-in, its deployments — all on a single cluster. This one is
-about the cluster boundary itself: the same team across several clusters. It
-stands on its own, and it's the ground the per-tool articles build on when
-they later cross clusters too.
+Earlier articles in this series carried one team into one more tool, such as
+its secrets or its deployments, on a single cluster. This one is about the
+cluster boundary itself: the same team on several clusters. It stands on its
+own.
 
-## What keeping teams consistent across clusters costs today
+## What one team costs across a fleet
 
-Here's the `acme` team on one cluster: a namespace, the groups that own and
-view it, and a budget. On OpenShift, by hand, that's a project, two role
-bindings and a resource quota:
+Here's the `acme` team on one cluster, as the objects the hub has to send.
+The team has three namespaces, two groups of people and a budget:
 
-```bash
-oc new-project acme-apps
-oc adm policy add-role-to-group admin acme-owners -n acme-apps
-oc adm policy add-role-to-group view  acme-viewers -n acme-apps
-oc create quota acme -n acme-apps \
-  --hard=requests.cpu=2,requests.memory=4Gi,pods=5
+```
+Namespace       acme-apps
+RoleBinding     acme-apps/owners     group acme-owners   -> admin
+RoleBinding     acme-apps/viewers    group acme-viewers  -> view
+ResourceQuota   acme-apps/budget     a third of the team's budget
+
+Namespace       acme-build
+RoleBinding     acme-build/owners    group acme-owners   -> admin
+RoleBinding     acme-build/viewers   group acme-viewers  -> view
+ResourceQuota   acme-build/budget    a third of the team's budget
+
+Namespace       acme-data
+RoleBinding     acme-data/owners     group acme-owners   -> admin
+RoleBinding     acme-data/viewers    group acme-viewers  -> view
+ResourceQuota   acme-data/budget     a third of the team's budget
 ```
 
-That's one team, one namespace, one cluster. Now run it everywhere it has to
-be true:
+That's twelve objects for one team on one cluster. Forty teams on twelve
+clusters would be 5,760. No team is on every cluster, so the real number is
+smaller, and it's still thousands of objects that have to agree with each
+other.
 
-- **On every cluster.** The development and production clusters each need the
-  team, with the production one on a larger budget. Two clusters today, four
-  after the next region.
-- **Kept in step.** The team adds a namespace: add it on every cluster. Someone
-  joins or leaves: change it on every cluster. A budget changes: change it on
-  every cluster.
-- **Without drift.** Miss one cluster, or fat-finger one quota, and the team
-  is different there. Nobody notices until something behaves differently in
-  production than it did in development.
-- **For every team.** Multiply all of it by forty teams and the number of
-  clusters.
+Nobody writes them one by one. Platform teams write a template that turns a
+short list of teams into these objects, and the hub sends the result. That
+works until the upkeep starts:
 
-Platform teams end up in one of two places. Either each cluster is
-maintained on its own — safe on day one, drifted by the end of the quarter —
-or there's a pile of scripts that loop over clusters, which is a homegrown
-version of the tools OpenShift already gives you, without the reporting or
-the drift correction.
+- **A team needs a namespace.** It's a pull request to the platform's
+  repository, a review, and a wait, for something the team should be able to
+  do within its own boundary. On every cluster the team is on.
+- **A budget is split by hand.** The team has one budget, and it's divided
+  between namespaces up front, or tied to them with a selector someone
+  maintains. When the team's needs move, someone moves the numbers.
+- **A new cluster joins.** Someone works out which teams belong on it and
+  wires each one up.
+- **Production differs,** in ways that live inside the template's
+  conditions, where nobody reviewing a change can see them.
 
-## The idea: one tenant definition, an overlay per cluster
+And it breaks quietly. A role binding edited on one cluster stays edited
+until the next sync, or forever if that sync is manual. A cluster that loses
+its link to the hub keeps whatever it last had. The template itself has
+become a tenancy system that the platform team wrote, and now owns.
 
-Multi-Tenant Operator adds the object that's missing: a `Tenant` is the team.
-One object names the team's namespaces, its people, its budget and its
-guardrails, and the operator keeps the cluster in line with it. You write it
-once:
+## The idea: the hub places, the tenant defines
+
+Multi-Tenant Operator adds the object that's missing: a `Tenant` is the
+team. One object names the team's namespaces, its people and its budget, and
+the operator on the cluster makes it so. Here's all of `acme`:
 
 ```yaml
 apiVersion: tenantoperator.stakater.com/v1beta3
@@ -122,161 +131,179 @@ spec:
     viewers:
       groups: [acme-viewers]
   namespaces:
-    withTenantPrefix:
-      - apps
+    withTenantPrefix: [apps, build, data]
 ```
 
-That definition is the same on every cluster — the team's identity doesn't
-change because it's running somewhere else. What changes per cluster is
-small: the budget is larger in production. So the team lives in Git as a
-**base**, and each environment is a thin **overlay** that changes only what
-differs:
+That definition is the same on every cluster, because the team is the same
+team wherever it runs. What differs per environment is small and explicit.
+The team lives in Git as a **base**, and each environment is an **overlay**
+that changes only what differs, such as a larger budget in production:
 
 ```yaml
-# overlays/prod — the same team, a bigger budget
+# overlays/prod: the same team, a larger budget
 patches:
   - target: { kind: Quota, name: acme-quota }
     patch: |-
       - op: replace
         path: /spec/resourcequota/hard/requests.cpu
         value: "20"
-      - op: replace
-        path: /spec/resourcequota/hard/pods
-        value: "50"
 ```
 
-One definition, read once in review; the differences between clusters are
-exactly what the overlays say, and nothing else.
+So the work splits in two. **The hub decides where a team exists:** which
+clusters get `acme`, and with which overlay. **Multi-Tenant Operator decides
+what a team is there:** it creates the namespaces, binds the groups, applies
+the budget, and keeps doing so.
 
-| By hand, per cluster | With Multi-Tenant Operator |
-|---|---|
-| Create the team's namespaces on each cluster | The `Tenant`, distributed once, creates them on each |
-| Bind roles for owners and viewers, per cluster | The tenant's `accessControl`, the same on every cluster |
-| Set a resource quota per cluster | One `Quota`, with a per-cluster overlay for the numbers |
-| Add a namespace on every cluster | Add it to the base; every cluster follows |
-| Change a member group on every cluster | Change it in the base; every cluster follows |
-| Keep the clusters from drifting apart | One source of truth; each cluster reconciled to it |
-| Make production stricter, by remembering to | An overlay that says exactly how production differs |
+| The work | The hub | Multi-Tenant Operator, on each cluster |
+|---|---|---|
+| Put a team on a cluster | Sends one `Tenant` and its `Quota` | Creates the team's namespaces, access and budget from them |
+| Put a team on the right clusters | Selects clusters by label | |
+| Bring in a new cluster | One label, and its teams arrive | Builds each team on arrival |
+| Make production differ | Sends the production overlay | |
+| Add a person or a namespace for a team | Sends the changed `Tenant` | Updates every namespace of the team |
+| Give a team one budget across its namespaces | | One `Quota` for the tenant [To confirm with engineering: the quota is one budget across all the tenant's namespaces, and tests cover it] |
+| Let a team add a namespace on its own | | A tenant owner creates it; it joins the tenant, with its access and inside its budget [To confirm with engineering: this works when the `Tenant` is managed from Git, and the namespace survives the next sync] |
+| Undo a change made on the cluster | Puts back a changed `Tenant` | Puts back what's inside the tenant |
 
-Tenants belong to the platform team and live in Git, so a team that needs
-something — a new namespace, a new member group, more budget in production —
-proposes it as a pull request. The platform team reviews and merges it, and
-every cluster follows from there.
+The hub does what it's good at, and the template is gone. What the hub
+sends for a team is two small objects, whatever the team's size.
 
 ## How it works
 
 Nothing new runs between the clusters. Multi-Tenant Operator is installed on
-each cluster and governs only that cluster. One cluster — the **hub** —
-holds the tool that distributes the tenant definitions to the others, the
-**spokes**. On OpenShift that tool is one you likely already run, and either
-of two does the job.
+each spoke and governs only that spoke.
 
 | Component | Role |
 |---|---|
-| **Git** | The one source of truth: the base `Tenant` and `Quota`, and an overlay per environment |
-| **The hub cluster** | Runs the distribution tool — OpenShift GitOps or Advanced Cluster Management — and sends each spoke its overlay |
-| **Each spoke cluster** | Runs Multi-Tenant Operator, which reconciles the tenant it receives into namespaces, access, quota and guardrails |
+| **Git** | Each team's `Tenant` and `Quota`, and an overlay per environment |
+| **Red Hat Advanced Cluster Management**, on the hub | Knows the clusters and their labels, and decides which clusters each team is placed on |
+| **Red Hat OpenShift GitOps**, on the hub | Delivers each team's definition to the clusters it's placed on, and keeps it in step with Git |
+| **Multi-Tenant Operator**, on each spoke | Turns the tenant into namespaces, access and budget, and keeps them right |
+
+[To confirm with Raffaele: placement by Advanced Cluster Management with
+delivery by OpenShift GitOps is the path Red Hat wants shown. If it's
+Advanced Cluster Management policies, this table and the diagram change.]
 
 ```mermaid
-flowchart TB
-    subgraph Git["Git — one source of truth"]
-        Base["base/<br/>Tenant · Quota"]
-        Odev["overlays/dev"]
-        Oprod["overlays/prod"]
+flowchart LR
+    Git["Git<br/>Tenant and Quota per team<br/>an overlay per environment"]
+
+    subgraph Hub["Hub cluster"]
+        ACM["Advanced Cluster Management<br/>which clusters get which team"]
+        GitOps["OpenShift GitOps<br/>delivers and keeps in step"]
     end
-    Hub["Hub cluster<br/>OpenShift GitOps or<br/>Advanced Cluster Management"]
-    Git --> Hub
-    Hub -->|dev overlay| Dev["Dev cluster<br/>Multi-Tenant Operator → acme"]
-    Hub -->|prod overlay| Prod["Prod cluster<br/>Multi-Tenant Operator → acme"]
+
+    subgraph Dev["Development spoke"]
+        TenantDev["Tenant acme"]
+        OpDev["Multi-Tenant Operator"]
+        TeamDev["acme's namespaces,<br/>access and budget"]
+    end
+
+    subgraph Prod["Production spoke"]
+        TenantProd["Tenant acme"]
+        OpProd["Multi-Tenant Operator"]
+        TeamProd["acme's namespaces,<br/>access and budget"]
+    end
+
+    Git --> GitOps
+    ACM --> GitOps
+    GitOps -->|"loop 1: dev overlay"| TenantDev
+    GitOps -->|"loop 1: prod overlay"| TenantProd
+    TenantDev --> OpDev
+    OpDev -->|"loop 2"| TeamDev
+    TenantProd --> OpProd
+    OpProd -->|"loop 2"| TeamProd
 ```
 
-**With Red Hat OpenShift GitOps,** one `ApplicationSet` on the hub selects
-every spoke and renders one Argo CD Application per spoke, each pointing at
-that spoke's overlay. Argo CD then keeps each spoke in sync with Git and
-corrects any drift. GitOps teams get the tenant in the same place as the rest
-of their platform configuration.
+Two loops keep a cluster right, and they cover different mistakes.
 
-**With Red Hat Advanced Cluster Management,** a `Policy` enforces the tenant,
-a `Placement` binds it to clusters by label — the dev overlay to the dev
-clusters, the prod overlay to the prod clusters — and Advanced Cluster
-Management reports each cluster's compliance and re-applies the objects if
-they drift. Fleet teams get the tenant alongside the rest of their
-governance, with a compliance view across every cluster.
+**Loop 1 runs from the hub.** If a `Tenant` on a spoke is changed or
+deleted, the hub puts it back as Git has it.
 
-Both carry the same base and the same overlays. The tutorial builds both, so
-you can see which fits your platform.
+**Loop 2 runs on the spoke.** If something inside the tenant is changed,
+such as a role binding removed from one of the team's namespaces,
+Multi-Tenant Operator puts it back. It doesn't need the hub for that. A
+spoke that loses its link to the hub keeps every team's boundary in force,
+and picks up changes from Git when the link returns.
 
-## What stays local, and what doesn't
+Placement is a label. A team's definition says which clusters it belongs
+on, such as every cluster labeled as development. When a new cluster joins
+the hub and gets that label, its teams arrive, and Multi-Tenant Operator
+builds each one. Nobody wires the cluster up team by team.
 
-This is the honest boundary, and it's worth being plain about.
+## What the platform team sees
 
-Multi-Tenant Operator has no fleet controller and no single cross-cluster
-view. Each installation governs only its own cluster, and the operator on
-the dev cluster knows nothing of the one on the prod cluster. The
-consistency across clusters doesn't come from the operator federating them —
-it comes from one tenant definition in Git, reconciled locally on each
-cluster. The tenant's runtime is local to each cluster; its definition is
-central.
+Multi-Tenant Operator has a console on each cluster. On a development
+spoke, the Tenants page shows the teams placed there:
 
-That boundary is deliberate, and it's why a team called `acme` exists
-independently on each cluster. What a team gets in its own slice of other
-tools — a Vault namespace, an Argo CD AppProject, a Grafana organisation,
-each delivered by an extension for Multi-Tenant Operator — is also local to
-each cluster today. Carrying one of those *across* clusters, so a team on two
-clusters shares one Vault namespace, is a different question with its own
-answers, and it's covered in a later article in this series. This article is
-the ground it stands on: the same team, defined once, on every cluster.
+> 📷 **Screenshot to capture** (`02-mto-console-dev-tenants.png`): the Multi-Tenant Operator console on the development spoke, Tenants page, with `acme` and `globex`.
+> **Highlight:** the row `acme`, with its quota.
 
-## Guardrails for the platform owner
+On a production spoke, it's the same team with the production budget:
 
-The people who own the fleet will ask what this setup can do. The answers:
+> 📷 **Screenshot to capture** (`03-mto-console-prod-tenants.png`): the Multi-Tenant Operator console on the production spoke, Tenants page, with `acme` and `globex`.
+> **Highlight:** the row `acme`, with its larger quota.
 
-- **One source of truth, reviewed in one place.** The tenant lives in Git. A
-  change to a team is a pull request the platform team reviews, and it
-  reaches every cluster the same way. There's one place to look to know what
-  a team is, on every cluster.
-- **The differences between clusters are explicit.** An overlay is the whole
-  list of how an environment differs. Production being stricter isn't a thing
-  someone has to remember to do on the production cluster — it's written
-  down, and reviewed.
-- **Drift is corrected, not just detected.** Whichever tool distributes the
-  tenant — OpenShift GitOps or Advanced Cluster Management — re-applies it if
-  a cluster drifts, and reports which clusters are in step. A change made
-  directly on a spoke doesn't quietly last.
-- **Blast radius is one environment.** A mistake in the dev overlay reaches
-  the dev clusters, not production. The base is reviewed precisely because it
-  reaches everywhere; the overlays keep per-environment risk per environment.
-- **Each cluster still stands on its own.** Because the operator is local,
-  one cluster being unreachable doesn't stop the others reconciling. There's
-  no fleet-wide control plane to be the single point of failure.
+The hub shows where each team has been placed, and whether each cluster is
+in step with Git:
+
+> 📷 **Screenshot to capture** (`04-hub-team-placements.png`): the hub's console, showing `acme` delivered to the development and production spokes, both in step.
+> **Highlight:** the two clusters `acme` is placed on.
+
+## Guardrails for the fleet owner
+
+The people who own the fleet will ask what this setup can do on their
+clusters. The answers:
+
+- **The hub needs very little on each spoke.** To deliver teams, it creates
+  two kinds of object, `Tenant` and `Quota`. The namespaces and role
+  bindings are made on the spoke, by the operator. [To confirm in the
+  validation run: the hub's access on a spoke can be limited to those two
+  kinds, and how.]
+- **Whoever can merge decides what a team is.** A change to the base reaches
+  every cluster the team is on. Keep the base with the platform team, and
+  let teams propose changes as pull requests.
+- **The differences between environments are written down.** An overlay is
+  the whole list of how an environment differs, and it's reviewed like any
+  other change.
+- **A mistake in an overlay stays in its environment.** A wrong number in
+  the development overlay reaches development clusters only.
+- **A spoke stands on its own.** Each cluster's operator works without the
+  hub. If the hub is unreachable, no team loses its boundary.
+- **Teams stay inside their tenant.** A tenant owner can act in the team's
+  own namespaces, on the clusters the team is placed on, and nowhere else.
+
+What isn't there: Multi-Tenant Operator has no view across the fleet. Each
+installation knows its own cluster, and the fleet view is the hub's.
 
 Two things are worth agreeing before production. Decide what belongs in the
-base and what belongs in an overlay: a team's identity and access belong in
-the base, so they can't drift between clusters, and only consumption and
-environment-specific guardrails belong in overlays. And decide who may merge
-to the base, because that's who decides what every team is, on every cluster.
+base and what an overlay may change: a team's people belong in the base, so
+access can't differ between clusters by accident. And decide which label
+places a team, because whoever can label a cluster decides which teams run
+on it.
 
 ## Try it
 
 Multi-Tenant Operator's Basic edition is free with no expiry, and manages up
-to two tenants on each cluster — enough to see one team appear on two
-clusters, the same in all but its budget, from a single definition, and to
-watch a change in Git reach both.
+to two tenants. [To confirm: Basic is two tenants on each cluster, so two
+teams on two spokes need no license.] That's enough to see two teams on two
+clusters from one definition each, a cluster that gets its teams from one
+label, and a boundary that's put back when it's broken.
 
-The companion tutorial,
+You bring the clusters: a hub with Advanced Cluster Management and OpenShift
+GitOps, and two spokes. The companion tutorial,
 [Hands-on: one tenant, on every cluster](https://github.com/stakater/mto-blogs/tree/main/08-try-it-tenants-across-clusters),
-takes you from a hub and two spokes to one team running on both, distributed
-first with OpenShift GitOps and then with Advanced Cluster Management.
+takes you from there to both teams running on both spokes.
 
-Carrying a team's slice of a *tool* across clusters — one Vault namespace for
-a team that spans clusters, for instance — isn't part of this article; it's
-covered in a later article in this series.
+Today, what a team gets in other tools through an extension, such as a
+Vault namespace or an Argo CD AppProject, belongs to one cluster. A team on
+two clusters has one on each. Sharing one between clusters isn't supported
+yet.
 
 ## What's next
 
-A team defined once now reaches every cluster. Later in this series, the
-tools a team already has on one cluster — its secrets, its deployments, its
-dashboards — learn to follow it across clusters too.
+A team defined once now reaches every cluster it belongs on. Later in this
+series, the same tenant follows the team into more of the tools it uses.
 
 ## About Multi-Tenant Operator
 
