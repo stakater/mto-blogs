@@ -13,9 +13,10 @@ with why it matters, what's open, and what must happen before writing.
 > cluster, from one definition with per-cluster overlays, distributed by
 > OpenShift GitOps and by Advanced Cluster Management — is drafted as topic 4,
 > posts [7](../07-tenants-across-clusters/post.md) and
-> [8](../08-try-it-tenants-across-clusters/post.md). That part needs no new
-> engineering: it's Multi-Tenant Operator reconciling the core `Tenant` locally
-> on each cluster, and its examples pass `make test`. **This entry is the
+> [8](../08-try-it-tenants-across-clusters/post.md), and is being reworked to
+> its [story](../07-tenants-across-clusters/story.md). It needs no new
+> extension, but the story lists facts engineering must confirm before the
+> posts claim them, and it hasn't run on clusters yet. **This entry is the
 > remaining, gated part:** carrying a team's slice of a *tool* (Vault, and
 > later Argo CD and Grafana) across clusters, which still needs the open
 > questions below answered and the extensions tested on two clusters.
