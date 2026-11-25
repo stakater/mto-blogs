@@ -9,6 +9,17 @@ with why it matters, what's open, and what must happen before writing.
 
 ### Tenants across several clusters
 
+> **Note (foundation drafted):** the *core* model — the same tenant on every
+> cluster, from one definition with per-cluster overlays, distributed by
+> OpenShift GitOps and by Advanced Cluster Management — is drafted as topic 4,
+> posts [7](../07-tenants-across-clusters/post.md) and
+> [8](../08-try-it-tenants-across-clusters/post.md). That part needs no new
+> engineering: it's Multi-Tenant Operator reconciling the core `Tenant` locally
+> on each cluster, and its examples pass `make test`. **This entry is the
+> remaining, gated part:** carrying a team's slice of a *tool* (Vault, and
+> later Argo CD and Grafana) across clusters, which still needs the open
+> questions below answered and the extensions tested on two clusters.
+
 **Why:** most platforms run more than one OpenShift cluster, and a common
 setup is **one Vault shared by several clusters**. Others run **one Vault per
 environment**, such as one for production and one for the rest. Readers will

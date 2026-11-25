@@ -1,0 +1,42 @@
+# Distribution, mechanism 1: OpenShift GitOps (Argo CD).
+#
+# One ApplicationSet on the hub. Its cluster generator selects every spoke
+# that carries the label `stakater.com/tenancy: "true"`, and renders one
+# Argo CD Application per spoke. Each Application points at the overlay for
+# that spoke's environment — read from the spoke's own
+# `stakater.com/environment` label — so the dev cluster gets overlays/dev and
+# the prod cluster gets overlays/prod, from this single definition.
+#
+# You label the spokes when you register them in Argo CD (see the tutorial).
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: acme-tenant
+  namespace: openshift-gitops
+spec:
+  goTemplate: true
+  goTemplateOptions:
+    - missingkey=error
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            stakater.com/tenancy: "true"
+  template:
+    metadata:
+      name: 'acme-tenant-{{.name}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/stakater/mto-blogs.git
+        targetRevision: main
+        path: '08-try-it-tenants-across-clusters/examples/overlays/{{index .metadata.labels "stakater.com/environment"}}'
+      destination:
+        # Tenant and Quota are cluster-scoped, so the namespace is only a
+        # default for any namespaced resource; the server is the spoke.
+        server: '{{.server}}'
+        namespace: multi-tenant-operator
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true

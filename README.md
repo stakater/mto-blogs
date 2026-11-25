@@ -41,7 +41,9 @@ clean cluster, the post isn't ready.
 | 4 | [Hands-on: one login for tenant members, on OpenShift and Vault](04-try-it-one-login-for-tenant-members/post.md) (tutorial: how) | Red Hat Developer, then Stakater blog | Draft, validated on OpenShift 4.21, screenshots captured |
 | 5 | [One tenant, from OpenShift to Argo CD](05-tenants-and-argocd/post.md) (explainer: why) | Red Hat Developer, then Stakater blog | Draft |
 | 6 | [Hands-on: tenants on OpenShift, carried into Argo CD](06-try-it-tenants-and-argocd/post.md) (tutorial: how) | Red Hat Developer, then Stakater blog | Draft, validated on OpenShift 4.21, screenshots captured |
-| 7 | Tenants and Vault Community: a different isolation model | Red Hat Developer, then Stakater blog | Idea |
+| 7 | [One tenant, on every cluster](07-tenants-across-clusters/post.md) (explainer: why) | Red Hat Developer, then Stakater blog | Draft |
+| 8 | [Hands-on: one tenant, on every cluster](08-try-it-tenants-across-clusters/post.md) (tutorial: how) | Red Hat Developer, then Stakater blog | Draft; examples pass `make test`, cluster run not yet done |
+| 9 | Tenants and Vault Community: a different isolation model | Red Hat Developer, then Stakater blog | Idea |
 | – | Same story, HashiCorp angle: Vault namespaces at scale on OpenShift | IBM HashiCorp | Idea, their team writes it |
 
 Posts 3 and 4 are separate from 1 and 2 on purpose. Posts 1 and 2 are about
